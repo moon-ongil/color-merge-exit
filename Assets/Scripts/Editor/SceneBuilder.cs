@@ -10,13 +10,13 @@ namespace ColorMergeExit.Editor
     /// Regenerates the playable Main scene using Unity's own scene API, so a valid
     /// scene can always be produced from the Editor even if the checked-in
     /// Main.unity is ever lost or fails to load.
-    /// Menu: Tools ▸ Color Exit.
+    /// Menu: Tools ▸ Color Merge Exit.
     /// </summary>
     public static class SceneBuilder
     {
         private const string ScenePath = "Assets/Scenes/Main.unity";
 
-        [MenuItem("Tools/Color Exit/Rebuild Main Scene")]
+        [MenuItem("Tools/Color Merge Exit/Rebuild Main Scene")]
         public static void RebuildMainScene()
         {
             var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
@@ -31,10 +31,10 @@ namespace ColorMergeExit.Editor
             EditorSceneManager.SaveScene(scene, ScenePath);
             EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene(ScenePath, true) };
 
-            Debug.Log($"[Color Exit] Rebuilt {ScenePath} and set it as build scene 0.");
+            Debug.Log($"[Color Merge Exit] Rebuilt {ScenePath} and set it as build scene 0.");
         }
 
-        [MenuItem("Tools/Color Exit/Open Main Scene")]
+        [MenuItem("Tools/Color Merge Exit/Open Main Scene")]
         public static void OpenMainScene()
         {
             if (File.Exists(ScenePath))

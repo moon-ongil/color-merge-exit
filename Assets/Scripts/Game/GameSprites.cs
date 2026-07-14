@@ -15,7 +15,7 @@ namespace ColorMergeExit.Game
     /// 1=color blocks, 2=exit portals, 3=movable obstacles, 4=static walls, 5=tiles,
     /// 6=UI/effects. HUD button icons still come from the legacy ui_buttons sheet.
     /// </summary>
-    [CreateAssetMenu(fileName = "GameSprites", menuName = "Color Exit/Game Sprites")]
+    [CreateAssetMenu(fileName = "GameSprites", menuName = "Color Merge Exit/Game Sprites")]
     public sealed class GameSprites : ScriptableObject
     {
         [Header("Row 1 — color blocks (index: Red,Blue,Yellow,Green,Purple,Orange)")]

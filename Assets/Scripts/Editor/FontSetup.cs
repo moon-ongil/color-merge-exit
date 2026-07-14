@@ -27,17 +27,17 @@ namespace ColorMergeExit.Editor
         {
             if (Directory.Exists("Assets/TextMesh Pro"))
             {
-                Debug.Log("[Color Exit] TMP essentials already present.");
+                Debug.Log("[Color Merge Exit] TMP essentials already present.");
                 return;
             }
 
             string pkg = FindEssentialsPackage();
-            if (pkg == null) { Debug.LogError("[Color Exit] TMP essentials unitypackage not found."); return; }
+            if (pkg == null) { Debug.LogError("[Color Merge Exit] TMP essentials unitypackage not found."); return; }
 
-            Debug.Log("[Color Exit] Importing TMP essentials from: " + pkg);
+            Debug.Log("[Color Merge Exit] Importing TMP essentials from: " + pkg);
             AssetDatabase.ImportPackage(pkg, false);
             AssetDatabase.Refresh();
-            Debug.Log("[Color Exit] TMP essentials import requested.");
+            Debug.Log("[Color Merge Exit] TMP essentials import requested.");
         }
 
         private static string FindEssentialsPackage()
@@ -68,12 +68,12 @@ namespace ColorMergeExit.Editor
                 foreach (var fb in new[] { sc, jp, ar })
                     if (fb != null) pretendard.fallbackFontAssetTable.Add(fb);
                 EditorUtility.SetDirty(pretendard);
-                Debug.Log($"[Color Exit] Pretendard fallbacks: {pretendard.fallbackFontAssetTable.Count}");
+                Debug.Log($"[Color Merge Exit] Pretendard fallbacks: {pretendard.fallbackFontAssetTable.Count}");
             }
 
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
-            Debug.Log("[Color Exit] Font assets created.");
+            Debug.Log("[Color Merge Exit] Font assets created.");
         }
 
         /// <summary>Build the playful display font (Titan One) used for the HUD/timer/stage
@@ -91,7 +91,7 @@ namespace ColorMergeExit.Editor
             }
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
-            Debug.Log("[Color Exit] Game display font created.");
+            Debug.Log("[Color Merge Exit] Game display font created.");
         }
 
         /// <summary>
@@ -110,12 +110,12 @@ namespace ColorMergeExit.Editor
             var arr = new char[set.Count];
             set.CopyTo(arr);
             string chars = new string(arr);
-            Debug.Log($"[Color Exit] subsetting to {chars.Length} unique glyphs.");
+            Debug.Log($"[Color Merge Exit] subsetting to {chars.Length} unique glyphs.");
 
             foreach (var name in new[] { "Pretendard SDF", "Game SDF", "NotoSansSC SDF", "NotoSansJP SDF", "NotoSansArabic SDF" })
             {
                 var fa = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(OutDir + name + ".asset");
-                if (fa == null) { Debug.LogWarning("[Color Exit] missing font asset: " + name); continue; }
+                if (fa == null) { Debug.LogWarning("[Color Merge Exit] missing font asset: " + name); continue; }
 
                 fa.atlasPopulationMode = AtlasPopulationMode.Dynamic; // need source to rasterize
                 fa.ClearFontAssetData(true);
@@ -133,19 +133,19 @@ namespace ColorMergeExit.Editor
 
                 int baked = fa.characterTable != null ? fa.characterTable.Count : 0;
                 int atlases = fa.atlasTextures != null ? fa.atlasTextures.Length : 0;
-                Debug.Log($"[Color Exit] optimized {name}: baked {baked} glyphs across {atlases} atlas(es).");
+                Debug.Log($"[Color Merge Exit] optimized {name}: baked {baked} glyphs across {atlases} atlas(es).");
             }
 
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
-            Debug.Log("[Color Exit] Font subsetting done — TTF source refs cleared (excluded from build).");
+            Debug.Log("[Color Merge Exit] Font subsetting done — TTF source refs cleared (excluded from build).");
         }
 
         private static TMP_FontAsset CreateFontAsset(string ttf, string assetName)
         {
             string src = FontDir + ttf;
             var font = AssetDatabase.LoadAssetAtPath<Font>(src);
-            if (font == null) { Debug.LogWarning("[Color Exit] Missing font: " + src); return null; }
+            if (font == null) { Debug.LogWarning("[Color Merge Exit] Missing font: " + src); return null; }
 
             string outPath = OutDir + assetName + ".asset";
             var existing = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(outPath);
@@ -173,7 +173,7 @@ namespace ColorMergeExit.Editor
                 }
             }
             EditorUtility.SetDirty(fa);
-            Debug.Log("[Color Exit] Created font asset: " + outPath);
+            Debug.Log("[Color Merge Exit] Created font asset: " + outPath);
             return fa;
         }
     }

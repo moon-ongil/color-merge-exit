@@ -1,4 +1,4 @@
-"""Authors levels for Color Exit and validates solvability with BFS.
+"""Authors levels for Color Merge Exit and validates solvability with BFS.
 Mirrors the C# Board semantics: exact-step moves, exit requires color+lane+orientation
 match, each exit advances its own sequence, win = all target vehicles exited.
 Emits JSON matching LevelData (enums as ints) to Assets/StreamingAssets/Levels/.

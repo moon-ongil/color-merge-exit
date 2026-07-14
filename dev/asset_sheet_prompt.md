@@ -1,4 +1,4 @@
-# Color Exit — UI/Icon Sprite Sheet — Image-Generation Context
+# Color Merge Exit — UI/Icon Sprite Sheet — Image-Generation Context
 
 ## ⚠️ EXACT GRID THE GAME READS (must match, or icons land wrong)
 The code slices `Assets/Resources/ui_sheet.png` as a **2048×2048** sheet, **8 columns × 8 rows**

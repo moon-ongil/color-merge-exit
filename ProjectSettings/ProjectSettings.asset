@@ -791,14 +791,14 @@ PlayerSettings:
   editorAssembliesCompatibilityLevel: 1
   m_RenderingPath: 1
   m_MobileRenderingPath: 1
-  metroPackageName: color-exit
+  metroPackageName: color-merge-exit
   metroPackageVersion: 
   metroCertificatePath: 
   metroCertificatePassword: 
   metroCertificateSubject: 
   metroCertificateIssuer: 
   metroCertificateNotAfter: 0000000000000000
-  metroApplicationDescription: color-exit
+  metroApplicationDescription: color-merge-exit
   wsaImages: {}
   metroTileShortName: 
   metroTileShowName: 0

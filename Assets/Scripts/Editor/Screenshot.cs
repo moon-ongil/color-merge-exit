@@ -95,7 +95,7 @@ namespace ColorMergeExit.Editor
                 cam.targetTexture = null;
 
                 File.WriteAllBytes(path, tex.EncodeToPNG());
-                Debug.Log($"[Color Exit] Screenshot saved: {Path.GetFullPath(path)} " +
+                Debug.Log($"[Color Merge Exit] Screenshot saved: {Path.GetFullPath(path)} " +
                           $"(sprites asset {(sprites != null ? "FOUND" : "MISSING")})");
 
                 Object.DestroyImmediate(rt);
@@ -158,7 +158,7 @@ namespace ColorMergeExit.Editor
                 sel.Show();
 
                 RenderToPng(cam, W, H, path);
-                Debug.Log($"[Color Exit] Select screenshot saved: {Path.GetFullPath(path)}");
+                Debug.Log($"[Color Merge Exit] Select screenshot saved: {Path.GetFullPath(path)}");
             }
             finally
             {

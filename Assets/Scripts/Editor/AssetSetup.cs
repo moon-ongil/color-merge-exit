@@ -23,7 +23,7 @@ namespace ColorMergeExit.Editor
     /// CarColor order (Red,Blue,Yellow,Green,Purple,Orange). HUD icons still come from
     /// the legacy ui_buttons sheet via color classification.
     ///
-    /// Run: menu Tools ▸ Color Exit ▸ Set Up Art, or
+    /// Run: menu Tools ▸ Color Merge Exit ▸ Set Up Art, or
     ///   Unity -batchmode -quit -executeMethod ColorMergeExit.Editor.AssetSetup.Run
     /// </summary>
     public static class AssetSetup
@@ -47,7 +47,7 @@ namespace ColorMergeExit.Editor
             new Color(0.95f, 0.55f, 0.16f), // Orange
         };
 
-        [MenuItem("Tools/Color Exit/Set Up Art")]
+        [MenuItem("Tools/Color Merge Exit/Set Up Art")]
         public static void Run()
         {
             SliceGrid(Sheet, "cell", Cols, Rows);
@@ -56,7 +56,7 @@ namespace ColorMergeExit.Editor
 
             BuildGameSprites();
             AssetDatabase.SaveAssets();
-            Debug.Log("[Color Exit] Art setup complete.");
+            Debug.Log("[Color Merge Exit] Art setup complete.");
         }
 
         // ---------- import ----------
@@ -65,7 +65,7 @@ namespace ColorMergeExit.Editor
             var importer = AssetImporter.GetAtPath(path) as TextureImporter;
             if (importer == null)
             {
-                Debug.LogWarning($"[Color Exit] No texture at {path}");
+                Debug.LogWarning($"[Color Merge Exit] No texture at {path}");
                 return null;
             }
             importer.textureType = TextureImporterType.Sprite;
@@ -106,7 +106,7 @@ namespace ColorMergeExit.Editor
                 }
 
             ApplyRects(importer, rects.ToArray(), names.ToArray());
-            Debug.Log($"[Color Exit] Grid-sliced {path} -> {rects.Count} non-empty cells.");
+            Debug.Log($"[Color Merge Exit] Grid-sliced {path} -> {rects.Count} non-empty cells.");
         }
 
         /// <summary>Shrink a cell rect to the tight bounding box of its opaque pixels
@@ -148,7 +148,7 @@ namespace ColorMergeExit.Editor
             var names = new string[rects.Length];
             for (int i = 0; i < rects.Length; i++) names[i] = $"{prefix}_{i:00}";
             ApplyRects(importer, rects, names);
-            Debug.Log($"[Color Exit] Auto-sliced {path} -> {rects.Length} sprites.");
+            Debug.Log($"[Color Merge Exit] Auto-sliced {path} -> {rects.Length} sprites.");
         }
 
         private static void ApplyRects(TextureImporter importer, Rect[] rects, string[] names)
@@ -232,7 +232,7 @@ namespace ColorMergeExit.Editor
             gs.sparkle = Cell(5, 5);
 
             int wired = gs.block.Count(s => s != null);
-            Debug.Log($"[Color Exit] sheet wired: blocks={wired}/6, exits={gs.exitByColor.Count(s => s != null)}/6, " +
+            Debug.Log($"[Color Merge Exit] sheet wired: blocks={wired}/6, exits={gs.exitByColor.Count(s => s != null)}/6, " +
                       $"movable={gs.movableObstacles.Count(s => s != null)}/6, walls={gs.staticWalls.Count(s => s != null)}/6");
 
             WireHudButtons(gs);
@@ -259,7 +259,7 @@ namespace ColorMergeExit.Editor
             gs.btnHome = btns.FirstOrDefault(s => s.name == "btn_09");
             gs.btnSettings = btns.FirstOrDefault(s => s.name == "btn_06");
             gs.star = btns.FirstOrDefault(s => s.name == "btn_07");
-            Debug.Log($"[Color Exit] buttons: restart={gs.btnRestart?.name ?? "none"}, undo={gs.btnUndo?.name ?? "none"}, " +
+            Debug.Log($"[Color Merge Exit] buttons: restart={gs.btnRestart?.name ?? "none"}, undo={gs.btnUndo?.name ?? "none"}, " +
                       $"home={gs.btnHome?.name ?? "none"}, star={gs.star?.name ?? "none"}");
         }
 

@@ -1,0 +1,61 @@
+{
+  "id": 27,
+  "name": "Stage 27",
+  "width": 6,
+  "height": 6,
+  "blocks": [
+    {
+      "id": 1,
+      "color": 3,
+      "x": 2,
+      "y": 2,
+      "w": 1,
+      "h": 1,
+      "cells": [
+        {
+          "x": 0,
+          "y": 0
+        }
+      ],
+      "axis": 0,
+      "locked": false
+    }
+  ],
+  "doors": [
+    {
+      "edge": 3,
+      "laneStart": 2,
+      "length": 1,
+      "color": 1,
+      "colorSequence": [
+        1
+      ]
+    },
+    {
+      "edge": 2,
+      "laneStart": 2,
+      "length": 1,
+      "color": 2,
+      "colorSequence": [
+        2
+      ]
+    }
+  ],
+  "walls": [
+    {
+      "x": 3,
+      "y": 5
+    }
+  ],
+  "splitters": [
+    {
+      "x": 3,
+      "y": 2
+    }
+  ],
+  "paint": [],
+  "memorize": false,
+  "timeLimitSeconds": 49.0,
+  "star2SecondsLeft": 9.8,
+  "star3SecondsLeft": 22.1
+}

@@ -1,0 +1,56 @@
+{
+  "id": 19,
+  "name": "Stage 19",
+  "width": 6,
+  "height": 6,
+  "blocks": [
+    {
+      "id": 1,
+      "color": 3,
+      "x": 3,
+      "y": 2,
+      "w": 1,
+      "h": 1,
+      "cells": [
+        {
+          "x": 0,
+          "y": 0
+        }
+      ],
+      "axis": 0,
+      "locked": false
+    }
+  ],
+  "doors": [
+    {
+      "edge": 1,
+      "laneStart": 3,
+      "length": 1,
+      "color": 1,
+      "colorSequence": [
+        1
+      ]
+    },
+    {
+      "edge": 0,
+      "laneStart": 3,
+      "length": 1,
+      "color": 2,
+      "colorSequence": [
+        2
+      ]
+    }
+  ],
+  "walls": [],
+  "splitters": [
+    {
+      "x": 3,
+      "y": 3
+    }
+  ],
+  "paint": [],
+  "memorize": false,
+  "timeLimitSeconds": 49.0,
+  "star2SecondsLeft": 9.8,
+  "star3SecondsLeft": 22.1
+}

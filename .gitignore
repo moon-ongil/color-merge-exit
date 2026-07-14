@@ -1,0 +1,19 @@
+# Unity
+[Ll]ibrary/
+[Tt]emp/
+[Oo]bj/
+[Bb]uild/
+[Bb]uilds/
+[Ll]ogs/
+[Uu]ser[Ss]ettings/
+*.csproj
+*.sln
+*.unityproj
+*.user
+
+# Local dotnet test harness (dev/CoreTests)
+dev/**/bin/
+dev/**/obj/
+
+# OS / editor
+.DS_Store

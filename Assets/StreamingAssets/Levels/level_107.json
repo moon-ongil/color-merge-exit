@@ -1,0 +1,61 @@
+{
+  "id": 107,
+  "name": "Stage 107",
+  "width": 6,
+  "height": 6,
+  "blocks": [
+    {
+      "id": 1,
+      "color": 4,
+      "x": 2,
+      "y": 2,
+      "w": 1,
+      "h": 1,
+      "cells": [
+        {
+          "x": 0,
+          "y": 0
+        }
+      ],
+      "axis": 0,
+      "locked": false
+    }
+  ],
+  "doors": [
+    {
+      "edge": 1,
+      "laneStart": 2,
+      "length": 1,
+      "color": 0,
+      "colorSequence": [
+        0
+      ]
+    },
+    {
+      "edge": 0,
+      "laneStart": 2,
+      "length": 1,
+      "color": 1,
+      "colorSequence": [
+        1
+      ]
+    }
+  ],
+  "walls": [
+    {
+      "x": 4,
+      "y": 3
+    }
+  ],
+  "splitters": [
+    {
+      "x": 2,
+      "y": 3
+    }
+  ],
+  "paint": [],
+  "memorize": false,
+  "timeLimitSeconds": 49.0,
+  "star2SecondsLeft": 9.9,
+  "star3SecondsLeft": 22.1
+}

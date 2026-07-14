@@ -1,0 +1,145 @@
+{
+  "id": 323,
+  "name": "Stage 323",
+  "width": 7,
+  "height": 7,
+  "blocks": [
+    {
+      "id": 1,
+      "color": 5,
+      "x": 1,
+      "y": 2,
+      "w": 1,
+      "h": 1,
+      "cells": [
+        {
+          "x": 0,
+          "y": 0
+        }
+      ],
+      "axis": 0,
+      "locked": false
+    },
+    {
+      "id": 2,
+      "color": 3,
+      "x": 2,
+      "y": 2,
+      "w": 1,
+      "h": 1,
+      "cells": [
+        {
+          "x": 0,
+          "y": 0
+        }
+      ],
+      "axis": 0,
+      "locked": false
+    },
+    {
+      "id": 3,
+      "color": 5,
+      "x": 0,
+      "y": 2,
+      "w": 1,
+      "h": 1,
+      "cells": [
+        {
+          "x": 0,
+          "y": 0
+        }
+      ],
+      "axis": 0,
+      "locked": false
+    }
+  ],
+  "doors": [
+    {
+      "edge": 1,
+      "laneStart": 1,
+      "length": 1,
+      "color": 0,
+      "colorSequence": [
+        0
+      ]
+    },
+    {
+      "edge": 0,
+      "laneStart": 1,
+      "length": 1,
+      "color": 2,
+      "colorSequence": [
+        2
+      ]
+    },
+    {
+      "edge": 1,
+      "laneStart": 2,
+      "length": 1,
+      "color": 1,
+      "colorSequence": [
+        1
+      ]
+    },
+    {
+      "edge": 0,
+      "laneStart": 2,
+      "length": 1,
+      "color": 2,
+      "colorSequence": [
+        2
+      ]
+    },
+    {
+      "edge": 1,
+      "laneStart": 0,
+      "length": 1,
+      "color": 0,
+      "colorSequence": [
+        0
+      ]
+    },
+    {
+      "edge": 0,
+      "laneStart": 0,
+      "length": 1,
+      "color": 2,
+      "colorSequence": [
+        2
+      ]
+    }
+  ],
+  "walls": [
+    {
+      "x": 5,
+      "y": 2
+    },
+    {
+      "x": 5,
+      "y": 4
+    },
+    {
+      "x": 6,
+      "y": 5
+    }
+  ],
+  "splitters": [
+    {
+      "x": 0,
+      "y": 3
+    },
+    {
+      "x": 1,
+      "y": 3
+    },
+    {
+      "x": 2,
+      "y": 3
+    }
+  ],
+  "paint": [],
+  "memorize": false,
+  "timeLimitSeconds": 67.0,
+  "star2SecondsLeft": 17.1,
+  "star3SecondsLeft": 33.4
+}

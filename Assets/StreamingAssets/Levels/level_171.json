@@ -1,0 +1,103 @@
+{
+  "id": 171,
+  "name": "Stage 171",
+  "width": 6,
+  "height": 6,
+  "blocks": [
+    {
+      "id": 1,
+      "color": 3,
+      "x": 2,
+      "y": 0,
+      "w": 1,
+      "h": 1,
+      "cells": [
+        {
+          "x": 0,
+          "y": 0
+        }
+      ],
+      "axis": 0,
+      "locked": false
+    },
+    {
+      "id": 2,
+      "color": 4,
+      "x": 2,
+      "y": 1,
+      "w": 1,
+      "h": 1,
+      "cells": [
+        {
+          "x": 0,
+          "y": 0
+        }
+      ],
+      "axis": 0,
+      "locked": false
+    }
+  ],
+  "doors": [
+    {
+      "edge": 3,
+      "laneStart": 0,
+      "length": 1,
+      "color": 1,
+      "colorSequence": [
+        1
+      ]
+    },
+    {
+      "edge": 2,
+      "laneStart": 0,
+      "length": 1,
+      "color": 2,
+      "colorSequence": [
+        2
+      ]
+    },
+    {
+      "edge": 3,
+      "laneStart": 1,
+      "length": 1,
+      "color": 0,
+      "colorSequence": [
+        0
+      ]
+    },
+    {
+      "edge": 2,
+      "laneStart": 1,
+      "length": 1,
+      "color": 1,
+      "colorSequence": [
+        1
+      ]
+    }
+  ],
+  "walls": [
+    {
+      "x": 0,
+      "y": 2
+    },
+    {
+      "x": 2,
+      "y": 3
+    }
+  ],
+  "splitters": [
+    {
+      "x": 3,
+      "y": 0
+    },
+    {
+      "x": 3,
+      "y": 1
+    }
+  ],
+  "paint": [],
+  "memorize": false,
+  "timeLimitSeconds": 58.0,
+  "star2SecondsLeft": 12.6,
+  "star3SecondsLeft": 27.0
+}

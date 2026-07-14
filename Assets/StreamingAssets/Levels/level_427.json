@@ -1,0 +1,187 @@
+{
+  "id": 427,
+  "name": "Stage 427",
+  "width": 8,
+  "height": 8,
+  "blocks": [
+    {
+      "id": 1,
+      "color": 4,
+      "x": 2,
+      "y": 0,
+      "w": 1,
+      "h": 1,
+      "cells": [
+        {
+          "x": 0,
+          "y": 0
+        }
+      ],
+      "axis": 0,
+      "locked": false
+    },
+    {
+      "id": 2,
+      "color": 4,
+      "x": 2,
+      "y": 5,
+      "w": 1,
+      "h": 1,
+      "cells": [
+        {
+          "x": 0,
+          "y": 0
+        }
+      ],
+      "axis": 0,
+      "locked": false
+    },
+    {
+      "id": 3,
+      "color": 5,
+      "x": 2,
+      "y": 2,
+      "w": 1,
+      "h": 1,
+      "cells": [
+        {
+          "x": 0,
+          "y": 0
+        }
+      ],
+      "axis": 0,
+      "locked": false
+    },
+    {
+      "id": 4,
+      "color": 4,
+      "x": 2,
+      "y": 7,
+      "w": 1,
+      "h": 1,
+      "cells": [
+        {
+          "x": 0,
+          "y": 0
+        }
+      ],
+      "axis": 0,
+      "locked": false
+    }
+  ],
+  "doors": [
+    {
+      "edge": 3,
+      "laneStart": 0,
+      "length": 1,
+      "color": 0,
+      "colorSequence": [
+        0
+      ]
+    },
+    {
+      "edge": 2,
+      "laneStart": 0,
+      "length": 1,
+      "color": 1,
+      "colorSequence": [
+        1
+      ]
+    },
+    {
+      "edge": 3,
+      "laneStart": 5,
+      "length": 1,
+      "color": 0,
+      "colorSequence": [
+        0
+      ]
+    },
+    {
+      "edge": 2,
+      "laneStart": 5,
+      "length": 1,
+      "color": 1,
+      "colorSequence": [
+        1
+      ]
+    },
+    {
+      "edge": 3,
+      "laneStart": 2,
+      "length": 1,
+      "color": 0,
+      "colorSequence": [
+        0
+      ]
+    },
+    {
+      "edge": 2,
+      "laneStart": 2,
+      "length": 1,
+      "color": 2,
+      "colorSequence": [
+        2
+      ]
+    },
+    {
+      "edge": 3,
+      "laneStart": 7,
+      "length": 1,
+      "color": 0,
+      "colorSequence": [
+        0
+      ]
+    },
+    {
+      "edge": 2,
+      "laneStart": 7,
+      "length": 1,
+      "color": 1,
+      "colorSequence": [
+        1
+      ]
+    }
+  ],
+  "walls": [
+    {
+      "x": 1,
+      "y": 6
+    },
+    {
+      "x": 2,
+      "y": 3
+    },
+    {
+      "x": 3,
+      "y": 1
+    },
+    {
+      "x": 7,
+      "y": 6
+    }
+  ],
+  "splitters": [
+    {
+      "x": 3,
+      "y": 0
+    },
+    {
+      "x": 3,
+      "y": 2
+    },
+    {
+      "x": 3,
+      "y": 5
+    },
+    {
+      "x": 3,
+      "y": 7
+    }
+  ],
+  "paint": [],
+  "memorize": false,
+  "timeLimitSeconds": 76.0,
+  "star2SecondsLeft": 21.4,
+  "star3SecondsLeft": 39.7
+}

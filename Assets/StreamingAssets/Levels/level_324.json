@@ -1,0 +1,397 @@
+{
+  "id": 324,
+  "name": "Stage 324",
+  "width": 8,
+  "height": 8,
+  "blocks": [
+    {
+      "id": 1,
+      "color": 0,
+      "x": 2,
+      "y": 5,
+      "w": 1,
+      "h": 1,
+      "cells": [
+        {
+          "x": 0,
+          "y": 0
+        }
+      ],
+      "axis": 0,
+      "locked": false
+    },
+    {
+      "id": 2,
+      "color": 1,
+      "x": 2,
+      "y": 3,
+      "w": 1,
+      "h": 1,
+      "cells": [
+        {
+          "x": 0,
+          "y": 0
+        }
+      ],
+      "axis": 0,
+      "locked": false
+    },
+    {
+      "id": 3,
+      "color": 0,
+      "x": 2,
+      "y": 1,
+      "w": 1,
+      "h": 1,
+      "cells": [
+        {
+          "x": 0,
+          "y": 0
+        }
+      ],
+      "axis": 0,
+      "locked": false
+    },
+    {
+      "id": 4,
+      "color": 1,
+      "x": 0,
+      "y": 5,
+      "w": 1,
+      "h": 1,
+      "cells": [
+        {
+          "x": 0,
+          "y": 0
+        }
+      ],
+      "axis": 0,
+      "locked": false
+    },
+    {
+      "id": 5,
+      "color": 0,
+      "x": 0,
+      "y": 3,
+      "w": 1,
+      "h": 1,
+      "cells": [
+        {
+          "x": 0,
+          "y": 0
+        }
+      ],
+      "axis": 0,
+      "locked": false
+    },
+    {
+      "id": 6,
+      "color": 1,
+      "x": 0,
+      "y": 1,
+      "w": 1,
+      "h": 1,
+      "cells": [
+        {
+          "x": 0,
+          "y": 0
+        }
+      ],
+      "axis": 0,
+      "locked": false
+    },
+    {
+      "id": 7,
+      "color": 2,
+      "x": 4,
+      "y": 0,
+      "w": 1,
+      "h": 1,
+      "cells": [
+        {
+          "x": 0,
+          "y": 0
+        },
+        {
+          "x": 0,
+          "y": 1
+        },
+        {
+          "x": 1,
+          "y": 1
+        }
+      ],
+      "axis": 0,
+      "locked": false
+    },
+    {
+      "id": 8,
+      "color": 0,
+      "x": 4,
+      "y": 5,
+      "w": 1,
+      "h": 1,
+      "cells": [
+        {
+          "x": 0,
+          "y": 0
+        },
+        {
+          "x": 0,
+          "y": 1
+        },
+        {
+          "x": 1,
+          "y": 1
+        }
+      ],
+      "axis": 0,
+      "locked": true
+    },
+    {
+      "id": 9,
+      "color": 2,
+      "x": 1,
+      "y": 7,
+      "w": 1,
+      "h": 1,
+      "cells": [
+        {
+          "x": 0,
+          "y": 0
+        },
+        {
+          "x": 1,
+          "y": 0
+        }
+      ],
+      "axis": 0,
+      "locked": false
+    },
+    {
+      "id": 10,
+      "color": 1,
+      "x": 6,
+      "y": 7,
+      "w": 1,
+      "h": 1,
+      "cells": [
+        {
+          "x": 0,
+          "y": 0
+        },
+        {
+          "x": 1,
+          "y": 0
+        }
+      ],
+      "axis": 0,
+      "locked": true
+    },
+    {
+      "id": 11,
+      "color": 0,
+      "x": 6,
+      "y": 0,
+      "w": 1,
+      "h": 1,
+      "cells": [
+        {
+          "x": 0,
+          "y": 0
+        },
+        {
+          "x": 1,
+          "y": 0
+        }
+      ],
+      "axis": 0,
+      "locked": false
+    },
+    {
+      "id": 12,
+      "color": 1,
+      "x": 6,
+      "y": 3,
+      "w": 1,
+      "h": 1,
+      "cells": [
+        {
+          "x": 0,
+          "y": 0
+        },
+        {
+          "x": 1,
+          "y": 0
+        }
+      ],
+      "axis": 0,
+      "locked": false
+    },
+    {
+      "id": 13,
+      "color": 0,
+      "x": 1,
+      "y": 6,
+      "w": 1,
+      "h": 1,
+      "cells": [
+        {
+          "x": 0,
+          "y": 0
+        }
+      ],
+      "axis": 0,
+      "locked": false
+    },
+    {
+      "id": 14,
+      "color": 2,
+      "x": 1,
+      "y": 3,
+      "w": 1,
+      "h": 1,
+      "cells": [
+        {
+          "x": 0,
+          "y": 0
+        }
+      ],
+      "axis": 0,
+      "locked": true
+    },
+    {
+      "id": 15,
+      "color": 2,
+      "x": 3,
+      "y": 3,
+      "w": 1,
+      "h": 1,
+      "cells": [
+        {
+          "x": 0,
+          "y": 0
+        }
+      ],
+      "axis": 0,
+      "locked": false
+    },
+    {
+      "id": 16,
+      "color": 1,
+      "x": 3,
+      "y": 6,
+      "w": 1,
+      "h": 1,
+      "cells": [
+        {
+          "x": 0,
+          "y": 0
+        }
+      ],
+      "axis": 0,
+      "locked": true
+    }
+  ],
+  "doors": [
+    {
+      "edge": 0,
+      "laneStart": 2,
+      "length": 1,
+      "color": 6,
+      "colorSequence": [
+        6
+      ]
+    },
+    {
+      "edge": 0,
+      "laneStart": 0,
+      "length": 1,
+      "color": 11,
+      "colorSequence": [
+        11
+      ]
+    },
+    {
+      "edge": 3,
+      "laneStart": 3,
+      "length": 2,
+      "color": 5,
+      "colorSequence": [
+        5
+      ]
+    },
+    {
+      "edge": 0,
+      "laneStart": 4,
+      "length": 2,
+      "color": 3,
+      "colorSequence": [
+        3
+      ]
+    },
+    {
+      "edge": 2,
+      "laneStart": 2,
+      "length": 1,
+      "color": 4,
+      "colorSequence": [
+        4
+      ]
+    },
+    {
+      "edge": 2,
+      "laneStart": 4,
+      "length": 1,
+      "color": 5,
+      "colorSequence": [
+        5
+      ]
+    },
+    {
+      "edge": 2,
+      "laneStart": 5,
+      "length": 1,
+      "color": 3,
+      "colorSequence": [
+        3
+      ]
+    }
+  ],
+  "walls": [
+    {
+      "x": 0,
+      "y": 7
+    },
+    {
+      "x": 1,
+      "y": 1
+    },
+    {
+      "x": 3,
+      "y": 1
+    },
+    {
+      "x": 6,
+      "y": 5
+    },
+    {
+      "x": 6,
+      "y": 6
+    },
+    {
+      "x": 7,
+      "y": 5
+    },
+    {
+      "x": 7,
+      "y": 6
+    }
+  ],
+  "splitters": [],
+  "paint": [],
+  "memorize": false,
+  "timeLimitSeconds": 184.0,
+  "star2SecondsLeft": 47.1,
+  "star3SecondsLeft": 91.9
+}

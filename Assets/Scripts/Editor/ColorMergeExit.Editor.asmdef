@@ -1,0 +1,21 @@
+{
+    "name": "ColorMergeExit.Editor",
+    "rootNamespace": "ColorMergeExit.Editor",
+    "references": [
+        "ColorMergeExit.Game",
+        "ColorMergeExit.Core",
+        "Unity.2D.Sprite.Editor",
+        "Unity.TextMeshPro"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

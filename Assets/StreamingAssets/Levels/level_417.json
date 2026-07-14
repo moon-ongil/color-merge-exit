@@ -1,0 +1,450 @@
+{
+  "id": 417,
+  "name": "Stage 417",
+  "width": 8,
+  "height": 8,
+  "blocks": [
+    {
+      "id": 1,
+      "color": 1,
+      "x": 1,
+      "y": 5,
+      "w": 1,
+      "h": 1,
+      "cells": [
+        {
+          "x": 0,
+          "y": 0
+        }
+      ],
+      "axis": 0,
+      "locked": false
+    },
+    {
+      "id": 2,
+      "color": 2,
+      "x": 1,
+      "y": 3,
+      "w": 1,
+      "h": 1,
+      "cells": [
+        {
+          "x": 0,
+          "y": 0
+        }
+      ],
+      "axis": 0,
+      "locked": false
+    },
+    {
+      "id": 3,
+      "color": 2,
+      "x": 1,
+      "y": 1,
+      "w": 1,
+      "h": 1,
+      "cells": [
+        {
+          "x": 0,
+          "y": 0
+        }
+      ],
+      "axis": 0,
+      "locked": false
+    },
+    {
+      "id": 4,
+      "color": 0,
+      "x": 3,
+      "y": 5,
+      "w": 1,
+      "h": 1,
+      "cells": [
+        {
+          "x": 0,
+          "y": 0
+        }
+      ],
+      "axis": 0,
+      "locked": false
+    },
+    {
+      "id": 5,
+      "color": 1,
+      "x": 3,
+      "y": 3,
+      "w": 1,
+      "h": 1,
+      "cells": [
+        {
+          "x": 0,
+          "y": 0
+        }
+      ],
+      "axis": 0,
+      "locked": false
+    },
+    {
+      "id": 6,
+      "color": 0,
+      "x": 3,
+      "y": 1,
+      "w": 1,
+      "h": 1,
+      "cells": [
+        {
+          "x": 0,
+          "y": 0
+        }
+      ],
+      "axis": 0,
+      "locked": false
+    },
+    {
+      "id": 7,
+      "color": 1,
+      "x": 7,
+      "y": 5,
+      "w": 1,
+      "h": 1,
+      "cells": [
+        {
+          "x": 0,
+          "y": 0
+        }
+      ],
+      "axis": 0,
+      "locked": false
+    },
+    {
+      "id": 8,
+      "color": 0,
+      "x": 7,
+      "y": 3,
+      "w": 1,
+      "h": 1,
+      "cells": [
+        {
+          "x": 0,
+          "y": 0
+        }
+      ],
+      "axis": 0,
+      "locked": false
+    },
+    {
+      "id": 9,
+      "color": 1,
+      "x": 7,
+      "y": 1,
+      "w": 1,
+      "h": 1,
+      "cells": [
+        {
+          "x": 0,
+          "y": 0
+        }
+      ],
+      "axis": 0,
+      "locked": false
+    },
+    {
+      "id": 10,
+      "color": 1,
+      "x": 4,
+      "y": 5,
+      "w": 1,
+      "h": 1,
+      "cells": [
+        {
+          "x": 1,
+          "y": 0
+        },
+        {
+          "x": 0,
+          "y": 1
+        },
+        {
+          "x": 1,
+          "y": 1
+        }
+      ],
+      "axis": 0,
+      "locked": false
+    },
+    {
+      "id": 11,
+      "color": 2,
+      "x": 4,
+      "y": 0,
+      "w": 1,
+      "h": 1,
+      "cells": [
+        {
+          "x": 1,
+          "y": 0
+        },
+        {
+          "x": 0,
+          "y": 1
+        },
+        {
+          "x": 1,
+          "y": 1
+        }
+      ],
+      "axis": 0,
+      "locked": true
+    },
+    {
+      "id": 12,
+      "color": 1,
+      "x": 2,
+      "y": 0,
+      "w": 1,
+      "h": 1,
+      "cells": [
+        {
+          "x": 0,
+          "y": 0
+        },
+        {
+          "x": 0,
+          "y": 1
+        }
+      ],
+      "axis": 0,
+      "locked": false
+    },
+    {
+      "id": 13,
+      "color": 2,
+      "x": 2,
+      "y": 5,
+      "w": 1,
+      "h": 1,
+      "cells": [
+        {
+          "x": 0,
+          "y": 0
+        },
+        {
+          "x": 0,
+          "y": 1
+        }
+      ],
+      "axis": 0,
+      "locked": true
+    },
+    {
+      "id": 14,
+      "color": 0,
+      "x": 1,
+      "y": 7,
+      "w": 1,
+      "h": 1,
+      "cells": [
+        {
+          "x": 0,
+          "y": 0
+        },
+        {
+          "x": 1,
+          "y": 0
+        }
+      ],
+      "axis": 0,
+      "locked": false
+    },
+    {
+      "id": 15,
+      "color": 2,
+      "x": 6,
+      "y": 7,
+      "w": 1,
+      "h": 1,
+      "cells": [
+        {
+          "x": 0,
+          "y": 0
+        },
+        {
+          "x": 1,
+          "y": 0
+        }
+      ],
+      "axis": 0,
+      "locked": true
+    },
+    {
+      "id": 16,
+      "color": 1,
+      "x": 6,
+      "y": 3,
+      "w": 1,
+      "h": 1,
+      "cells": [
+        {
+          "x": 0,
+          "y": 0
+        }
+      ],
+      "axis": 0,
+      "locked": false
+    },
+    {
+      "id": 17,
+      "color": 0,
+      "x": 6,
+      "y": 6,
+      "w": 1,
+      "h": 1,
+      "cells": [
+        {
+          "x": 0,
+          "y": 0
+        }
+      ],
+      "axis": 0,
+      "locked": true
+    },
+    {
+      "id": 18,
+      "color": 0,
+      "x": 0,
+      "y": 3,
+      "w": 1,
+      "h": 1,
+      "cells": [
+        {
+          "x": 0,
+          "y": 0
+        }
+      ],
+      "axis": 0,
+      "locked": false
+    },
+    {
+      "id": 19,
+      "color": 1,
+      "x": 0,
+      "y": 0,
+      "w": 1,
+      "h": 1,
+      "cells": [
+        {
+          "x": 0,
+          "y": 0
+        }
+      ],
+      "axis": 0,
+      "locked": true
+    }
+  ],
+  "doors": [
+    {
+      "edge": 0,
+      "laneStart": 1,
+      "length": 1,
+      "color": 8,
+      "colorSequence": [
+        8
+      ]
+    },
+    {
+      "edge": 0,
+      "laneStart": 3,
+      "length": 1,
+      "color": 6,
+      "colorSequence": [
+        6
+      ]
+    },
+    {
+      "edge": 0,
+      "laneStart": 7,
+      "length": 1,
+      "color": 11,
+      "colorSequence": [
+        11
+      ]
+    },
+    {
+      "edge": 3,
+      "laneStart": 2,
+      "length": 2,
+      "color": 3,
+      "colorSequence": [
+        3
+      ]
+    },
+    {
+      "edge": 2,
+      "laneStart": 3,
+      "length": 2,
+      "color": 3,
+      "colorSequence": [
+        3
+      ]
+    },
+    {
+      "edge": 0,
+      "laneStart": 4,
+      "length": 2,
+      "color": 5,
+      "colorSequence": [
+        5
+      ]
+    },
+    {
+      "edge": 2,
+      "laneStart": 5,
+      "length": 1,
+      "color": 4,
+      "colorSequence": [
+        4
+      ]
+    },
+    {
+      "edge": 3,
+      "laneStart": 1,
+      "length": 1,
+      "color": 4,
+      "colorSequence": [
+        4
+      ]
+    }
+  ],
+  "walls": [
+    {
+      "x": 0,
+      "y": 6
+    },
+    {
+      "x": 0,
+      "y": 7
+    },
+    {
+      "x": 1,
+      "y": 6
+    },
+    {
+      "x": 3,
+      "y": 6
+    },
+    {
+      "x": 6,
+      "y": 0
+    },
+    {
+      "x": 7,
+      "y": 6
+    }
+  ],
+  "splitters": [],
+  "paint": [],
+  "memorize": false,
+  "timeLimitSeconds": 211.0,
+  "star2SecondsLeft": 58.9,
+  "star3SecondsLeft": 109.7
+}

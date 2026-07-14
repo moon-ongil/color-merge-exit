@@ -1,0 +1,65 @@
+{
+  "id": 35,
+  "name": "Stage 35",
+  "width": 6,
+  "height": 6,
+  "blocks": [
+    {
+      "id": 1,
+      "color": 4,
+      "x": 4,
+      "y": 2,
+      "w": 1,
+      "h": 1,
+      "cells": [
+        {
+          "x": 0,
+          "y": 0
+        }
+      ],
+      "axis": 0,
+      "locked": false
+    }
+  ],
+  "doors": [
+    {
+      "edge": 1,
+      "laneStart": 4,
+      "length": 1,
+      "color": 0,
+      "colorSequence": [
+        0
+      ]
+    },
+    {
+      "edge": 0,
+      "laneStart": 4,
+      "length": 1,
+      "color": 1,
+      "colorSequence": [
+        1
+      ]
+    }
+  ],
+  "walls": [
+    {
+      "x": 0,
+      "y": 4
+    },
+    {
+      "x": 1,
+      "y": 5
+    }
+  ],
+  "splitters": [
+    {
+      "x": 4,
+      "y": 3
+    }
+  ],
+  "paint": [],
+  "memorize": false,
+  "timeLimitSeconds": 49.0,
+  "star2SecondsLeft": 9.8,
+  "star3SecondsLeft": 22.1
+}

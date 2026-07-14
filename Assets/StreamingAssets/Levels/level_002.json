@@ -1,0 +1,58 @@
+{
+  "id": 2,
+  "name": "Stage 2",
+  "width": 6,
+  "height": 6,
+  "blocks": [
+    {
+      "id": 1,
+      "color": 1,
+      "x": 3,
+      "y": 5,
+      "w": 1,
+      "h": 1,
+      "cells": [
+        {
+          "x": 0,
+          "y": 0
+        }
+      ],
+      "axis": 0,
+      "locked": false
+    },
+    {
+      "id": 2,
+      "color": 2,
+      "x": 3,
+      "y": 2,
+      "w": 1,
+      "h": 1,
+      "cells": [
+        {
+          "x": 0,
+          "y": 0
+        }
+      ],
+      "axis": 0,
+      "locked": false
+    }
+  ],
+  "doors": [
+    {
+      "edge": 0,
+      "laneStart": 3,
+      "length": 1,
+      "color": 3,
+      "colorSequence": [
+        3
+      ]
+    }
+  ],
+  "walls": [],
+  "splitters": [],
+  "paint": [],
+  "memorize": false,
+  "timeLimitSeconds": 58.0,
+  "star2SecondsLeft": 11.6,
+  "star3SecondsLeft": 26.1
+}

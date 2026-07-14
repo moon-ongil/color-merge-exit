@@ -1,0 +1,60 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9c6a5e65147814bae96a2fbaa80dd9ab, type: 3}
+  m_Name: GameSprites
+  m_EditorClassIdentifier: 
+  block:
+  - {fileID: 754916661, guid: d7198a9f8a0594424bf028c2aa7ce781, type: 3}
+  - {fileID: 1574743459, guid: d7198a9f8a0594424bf028c2aa7ce781, type: 3}
+  - {fileID: 1761156716, guid: d7198a9f8a0594424bf028c2aa7ce781, type: 3}
+  - {fileID: -1975956456, guid: d7198a9f8a0594424bf028c2aa7ce781, type: 3}
+  - {fileID: 954231860, guid: d7198a9f8a0594424bf028c2aa7ce781, type: 3}
+  - {fileID: -1590382415, guid: d7198a9f8a0594424bf028c2aa7ce781, type: 3}
+  exitByColor:
+  - {fileID: -284669624, guid: d7198a9f8a0594424bf028c2aa7ce781, type: 3}
+  - {fileID: -1170281248, guid: d7198a9f8a0594424bf028c2aa7ce781, type: 3}
+  - {fileID: -962324399, guid: d7198a9f8a0594424bf028c2aa7ce781, type: 3}
+  - {fileID: -686663096, guid: d7198a9f8a0594424bf028c2aa7ce781, type: 3}
+  - {fileID: -167135660, guid: d7198a9f8a0594424bf028c2aa7ce781, type: 3}
+  - {fileID: 2112697869, guid: d7198a9f8a0594424bf028c2aa7ce781, type: 3}
+  movableObstacles:
+  - {fileID: 1173898677, guid: d7198a9f8a0594424bf028c2aa7ce781, type: 3}
+  - {fileID: 840566489, guid: d7198a9f8a0594424bf028c2aa7ce781, type: 3}
+  - {fileID: 1813957622, guid: d7198a9f8a0594424bf028c2aa7ce781, type: 3}
+  - {fileID: 731250943, guid: d7198a9f8a0594424bf028c2aa7ce781, type: 3}
+  - {fileID: -1176771707, guid: d7198a9f8a0594424bf028c2aa7ce781, type: 3}
+  - {fileID: -1200304358, guid: d7198a9f8a0594424bf028c2aa7ce781, type: 3}
+  staticWalls:
+  - {fileID: 610419414, guid: d7198a9f8a0594424bf028c2aa7ce781, type: 3}
+  - {fileID: 1871380519, guid: d7198a9f8a0594424bf028c2aa7ce781, type: 3}
+  - {fileID: 1015337742, guid: d7198a9f8a0594424bf028c2aa7ce781, type: 3}
+  - {fileID: -1774386432, guid: d7198a9f8a0594424bf028c2aa7ce781, type: 3}
+  - {fileID: 728718358, guid: d7198a9f8a0594424bf028c2aa7ce781, type: 3}
+  - {fileID: -1416614037, guid: d7198a9f8a0594424bf028c2aa7ce781, type: 3}
+  tiles:
+  - {fileID: 202587103, guid: d7198a9f8a0594424bf028c2aa7ce781, type: 3}
+  - {fileID: 1279399676, guid: d7198a9f8a0594424bf028c2aa7ce781, type: 3}
+  - {fileID: -1944073784, guid: d7198a9f8a0594424bf028c2aa7ce781, type: 3}
+  - {fileID: -620265111, guid: d7198a9f8a0594424bf028c2aa7ce781, type: 3}
+  - {fileID: 553931281, guid: d7198a9f8a0594424bf028c2aa7ce781, type: 3}
+  - {fileID: -1738455731, guid: d7198a9f8a0594424bf028c2aa7ce781, type: 3}
+  btnPause: {fileID: -622605165, guid: d7198a9f8a0594424bf028c2aa7ce781, type: 3}
+  btnNext: {fileID: -1438407360, guid: d7198a9f8a0594424bf028c2aa7ce781, type: 3}
+  btnClose: {fileID: -653928729, guid: d7198a9f8a0594424bf028c2aa7ce781, type: 3}
+  btnSound: {fileID: 440589770, guid: d7198a9f8a0594424bf028c2aa7ce781, type: 3}
+  sparkle: {fileID: 965985532, guid: d7198a9f8a0594424bf028c2aa7ce781, type: 3}
+  obstacle: {fileID: 1173898677, guid: d7198a9f8a0594424bf028c2aa7ce781, type: 3}
+  btnRestart: {fileID: 2052848031, guid: a6fcb31cfc3224cddbb0a73e89db6db7, type: 3}
+  btnUndo: {fileID: 1429734634, guid: a6fcb31cfc3224cddbb0a73e89db6db7, type: 3}
+  btnHome: {fileID: -980481114, guid: a6fcb31cfc3224cddbb0a73e89db6db7, type: 3}
+  btnSettings: {fileID: 1003054782, guid: a6fcb31cfc3224cddbb0a73e89db6db7, type: 3}
+  star: {fileID: -1624203996, guid: a6fcb31cfc3224cddbb0a73e89db6db7, type: 3}

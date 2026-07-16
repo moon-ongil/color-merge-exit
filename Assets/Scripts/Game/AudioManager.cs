@@ -14,9 +14,25 @@ namespace ColorMergeExit.Game
         private AudioSource _sfx, _music;
         private AudioClip _slide, _exit, _win, _lose, _tap, _merge, _bgm;
 
+#if UNITY_IOS && !UNITY_EDITOR
+        [System.Runtime.InteropServices.DllImport("__Internal")]
+        private static extern void _CME_SetAudioSessionPlayback();
+#endif
+        // Play sound even when the iOS Ring/Silent switch is muted (see AudioSession.mm). Re-applied on
+        // focus regain because Unity re-initialises its own audio session when the app returns to front.
+        private static void ApplyPlaybackAudioSession()
+        {
+#if UNITY_IOS && !UNITY_EDITOR
+            _CME_SetAudioSessionPlayback();
+#endif
+        }
+
+        private void OnApplicationFocus(bool focus) { if (focus) ApplyPlaybackAudioSession(); }
+
         private void Awake()
         {
             Instance = this;
+            ApplyPlaybackAudioSession();
 
             _sfx = gameObject.AddComponent<AudioSource>();
             _sfx.playOnAwake = false;

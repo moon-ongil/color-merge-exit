@@ -6,45 +6,73 @@ using UnityEngine;
 namespace ColorMergeExit.Editor
 {
     /// <summary>
-    /// Command-line iOS build. Generates an Xcode project targeting the iOS Simulator
-    /// SDK (no code signing needed), which is then compiled with xcodebuild.
-    /// Run: Unity -batchmode -quit -buildTarget iOS -executeMethod ColorMergeExit.Editor.BuildScript.BuildIOSSimulator
+    /// Command-line iOS builds. <see cref="BuildIOSSimulator"/> targets the Simulator SDK (no signing),
+    /// compiled by dev/build_ios_sim.sh. <see cref="BuildIOSDevice"/> targets the Device SDK with
+    /// automatic signing under the ongil team, archived + uploaded to TestFlight by dev/build_ios_release.sh
+    /// using an App Store Connect API key (cloud signing — no local distribution cert needed).
     /// </summary>
     public static class BuildScript
     {
-        public static void BuildIOSSimulator()
+        private const string TeamId = "A8DBT8RJ43"; // ongil org Apple Developer team (shared across me.ongil.*)
+
+        // Run: Unity -batchmode -quit -buildTarget iOS -executeMethod ColorMergeExit.Editor.BuildScript.BuildIOSSimulator
+        public static void BuildIOSSimulator() => BuildIOS(device: false);
+
+        // Run: Unity -batchmode -quit -buildTarget iOS -executeMethod ColorMergeExit.Editor.BuildScript.BuildIOSDevice
+        public static void BuildIOSDevice() => BuildIOS(device: true);
+
+        private static void BuildIOS(bool device)
         {
             PlayerSettings.SetApplicationIdentifier(NamedBuildTarget.iOS, "me.ongil.colormergeexit");
             PlayerSettings.productName = "Color Merge Exit";
             AppIconSetup.Apply();   // assign Assets/Art/AppIcon.png to all icon slots
             SplashSetup.Apply();    // Unity logo → our logo splash sequence
             PlayerSettings.SetScriptingBackend(NamedBuildTarget.iOS, ScriptingImplementation.IL2CPP);
-            // Firebase Analytics SDK is imported → activate the guarded Analytics.cs implementation.
+            // Scripting defines: FIREBASE_ANALYTICS is always on (SDK is imported). PRODUCTION_ADS is set
+            // ONLY when the PRODUCTION_ADS env var == "1" (a real App Store build) — otherwise AdManager
+            // serves TEST ads, so Editor/simulator/TestFlight builds always show ads while testing. The
+            // list is rewritten every build so a stale PRODUCTION_ADS never lingers on a test build.
             {
-                string defs = PlayerSettings.GetScriptingDefineSymbols(NamedBuildTarget.iOS);
-                if (!defs.Contains("FIREBASE_ANALYTICS"))
-                    PlayerSettings.SetScriptingDefineSymbols(NamedBuildTarget.iOS,
-                        string.IsNullOrEmpty(defs) ? "FIREBASE_ANALYTICS" : defs + ";FIREBASE_ANALYTICS");
+                var defs = new System.Collections.Generic.List<string>(
+                    PlayerSettings.GetScriptingDefineSymbols(NamedBuildTarget.iOS)
+                        .Split(new[] { ';' }, System.StringSplitOptions.RemoveEmptyEntries));
+                void SetDef(string d, bool on) { defs.Remove(d); if (on) defs.Add(d); }
+                SetDef("FIREBASE_ANALYTICS", true);
+                SetDef("PRODUCTION_ADS", System.Environment.GetEnvironmentVariable("PRODUCTION_ADS") == "1");
+                PlayerSettings.SetScriptingDefineSymbols(NamedBuildTarget.iOS, string.Join(";", defs));
             }
-            PlayerSettings.iOS.sdkVersion = iOSSdkVersion.SimulatorSDK;
+            PlayerSettings.iOS.sdkVersion = device ? iOSSdkVersion.DeviceSDK : iOSSdkVersion.SimulatorSDK;
             PlayerSettings.iOS.targetOSVersionString = "15.0";
-            PlayerSettings.iOS.appleEnableAutomaticSigning = false;
             PlayerSettings.defaultInterfaceOrientation = UIOrientation.Portrait;
-            PlayerSettings.SetApplicationIdentifier(NamedBuildTarget.iOS, "me.ongil.colormergeexit");
+            PlayerSettings.iOS.targetDevice = iOSTargetDevice.iPhoneOnly; // iPhone-only (no iPad layout)
+
+            // Device build → automatic cloud signing under the ongil team (the actual signing cert +
+            // profile are resolved by xcodebuild -allowProvisioningUpdates with the ASC API key at
+            // archive time). Simulator build needs no signing.
+            if (device)
+            {
+                PlayerSettings.iOS.appleEnableAutomaticSigning = true;
+                PlayerSettings.iOS.appleDeveloperTeamID = TeamId;
+            }
+            else
+            {
+                PlayerSettings.iOS.appleEnableAutomaticSigning = false;
+            }
 
             EditorUserBuildSettings.SwitchActiveBuildTarget(BuildTargetGroup.iOS, BuildTarget.iOS);
 
+            string outPath = device ? "build/ios-release" : "build/ios";
             var options = new BuildPlayerOptions
             {
                 scenes = new[] { "Assets/Scenes/Main.unity" },
-                locationPathName = "build/ios",
+                locationPathName = outPath,
                 target = BuildTarget.iOS,
                 options = BuildOptions.None,
             };
 
             BuildReport report = BuildPipeline.BuildPlayer(options);
             var s = report.summary;
-            Debug.Log($"[Color Merge Exit] iOS build result: {s.result}, size: {s.totalSize} bytes, time: {s.totalTime}");
+            Debug.Log($"[Color Merge Exit] iOS {(device ? "device" : "simulator")} build result: {s.result}, size: {s.totalSize} bytes, time: {s.totalTime}");
             if (s.result != BuildResult.Succeeded)
             {
                 Debug.LogError("[Color Merge Exit] iOS build FAILED");
@@ -52,7 +80,7 @@ namespace ColorMergeExit.Editor
             }
             else
             {
-                Debug.Log("[Color Merge Exit] Xcode project at: build/ios");
+                Debug.Log($"[Color Merge Exit] Xcode project at: {outPath}");
                 EditorApplication.Exit(0);
             }
         }

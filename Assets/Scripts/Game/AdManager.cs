@@ -41,9 +41,17 @@ namespace ColorMergeExit.Game
         private const string RealRewardedId = "ca-app-pub-6223833456987726/8431670695";
 #endif
 
-        // Use test units in Development builds, or whenever a real id is still blank.
+        // Use TEST ad units for every non–App-Store build (Editor, simulator, TestFlight) so ads always
+        // render while testing — a real device is NOT auto-registered as an AdMob test device the way a
+        // simulator is, so real units on a brand-new app just fail to fill. The real units are used ONLY
+        // for a production App Store build, which must define PRODUCTION_ADS (BuildScript sets it when the
+        // PRODUCTION_ADS env var is passed). Also falls back to test whenever a real id is still blank.
         private static string Pick(string real, string test) =>
-            (Debug.isDebugBuild || string.IsNullOrEmpty(real)) ? test : real;
+#if PRODUCTION_ADS
+            string.IsNullOrEmpty(real) ? test : real;
+#else
+            test;
+#endif
 
         private static string BannerId => Pick(RealBannerId, TestBannerId);
         private static string InterstitialId => Pick(RealInterstitialId, TestInterstitialId);

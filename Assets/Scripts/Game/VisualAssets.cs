@@ -267,6 +267,31 @@ namespace ColorMergeExit.Game
             return _rounded;
         }
 
+        private static Sprite _roundedSmall;
+        /// <summary>Like <see cref="RoundedSquare"/> but with a SMALL corner radius — a barely-rounded
+        /// rectangle for tight bands (e.g. the door's next-colour segment) where the generous radius
+        /// reads as a pill. 9-sliced so the corner stays crisp at any size.</summary>
+        public static Sprite RoundedSquareSmall()
+        {
+            if (_roundedSmall != null) return _roundedSmall;
+            const int N = 64;
+            const float r = 8f;
+            var tex = new Texture2D(N, N, TextureFormat.RGBA32, false) { filterMode = FilterMode.Bilinear, wrapMode = TextureWrapMode.Clamp };
+            for (int y = 0; y < N; y++)
+            for (int x = 0; x < N; x++)
+            {
+                float dx = Mathf.Max(r - x, x - (N - 1 - r), 0f);
+                float dy = Mathf.Max(r - y, y - (N - 1 - r), 0f);
+                float dist = Mathf.Sqrt(dx * dx + dy * dy);
+                float a = Mathf.Clamp01(r - dist + 0.5f);
+                tex.SetPixel(x, y, new Color(1f, 1f, 1f, a));
+            }
+            tex.Apply();
+            _roundedSmall = Sprite.Create(tex, new Rect(0, 0, N, N), new Vector2(0.5f, 0.5f), N, 0,
+                SpriteMeshType.FullRect, new Vector4(r + 2, r + 2, r + 2, r + 2));
+            return _roundedSmall;
+        }
+
         private static Sprite _dialogPanel;
         /// <summary>A rounded panel with a GENEROUS corner radius for dialogs — clearly rounded (unlike
         /// the near-square <see cref="RoundedPanel"/>), 9-sliceable so any dialog size keeps soft corners.</summary>

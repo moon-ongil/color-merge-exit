@@ -17,10 +17,9 @@ namespace ColorMergeExit.Game
     {
         private sealed class BlockView { public Transform Root; public SpriteRenderer Sr; public SpriteRenderer Lock;
             public TMP_Text Fuse; public SpriteRenderer CycleRing; public SpriteRenderer NextPip; }
-        private sealed class DoorView { public Exit Door; public SpriteRenderer Bar; public SpriteRenderer NextSeg; public SpriteRenderer Arrow; public SpriteRenderer[] Pips; public Vector3 Pos; public Vector3 Outward; }
+        private sealed class DoorView { public Exit Door; public SpriteRenderer Bar; public SpriteRenderer NextSeg; public SpriteRenderer Arrow; public Vector3 Pos; public Vector3 Outward; }
 
         private readonly List<DoorView> _doorViews = new List<DoorView>();
-        private const int MaxPips = 2;
         private bool _doorsHidden;
 
         /// <summary>Hide/show door colors (memory mode): hidden doors render grey.</summary>
@@ -228,15 +227,18 @@ namespace ColorMergeExit.Game
                 arrow.transform.localRotation = arrowRot;
                 arrow.transform.localScale = new Vector3(aScale, aScale, 1f);
 
-                var pips = new SpriteRenderer[MaxPips];
-                for (int i = 0; i < MaxPips; i++)
-                {
-                    var pip = MakeSprite($"Pip{i}", _boardRoot, VisualAssets.RoundedSquare(), Color.white, 5);
-                    pip.transform.localScale = new Vector3(0.26f, 0.26f, 1f);
-                    pip.transform.localPosition = pos + outward * (thick * 0.5f + 0.28f + i * 0.30f);
-                    pips[i] = pip;
-                }
-                _doorViews.Add(new DoorView { Door = d, Bar = bar, Arrow = arrow, Pips = pips, Pos = pos, Outward = outward });
+                // Upcoming-colour band: the OUTER ~1/3 of the door (the BACK, away from the board) is
+                // painted the NEXT colour in the cycle — the current colour sits at the mouth where the
+                // block enters, and the next colour queues behind it, so it reads as "loaded next". On the
+                // door itself so it stays clearly visible (unlike the old tiny off-edge pips).
+                float seg = thick / 3f;
+                bool vertBar = d.Edge == Edge.Right || d.Edge == Edge.Left; // thick runs along X
+                var nextSeg = MakeSprite("DoorNext", _boardRoot, VisualAssets.RoundedSquareSmall(), Color.white, 6);
+                nextSeg.transform.localPosition = pos + outward * (thick * 0.5f - seg * 0.5f) + new Vector3(0f, 0f, -0.02f);
+                nextSeg.drawMode = SpriteDrawMode.Sliced;
+                nextSeg.size = vertBar ? new Vector2(seg, Mathf.Max(0.2f, scale.y - 0.14f))
+                                       : new Vector2(Mathf.Max(0.2f, scale.x - 0.14f), seg);
+                _doorViews.Add(new DoorView { Door = d, Bar = bar, NextSeg = nextSeg, Arrow = arrow, Pos = pos, Outward = outward });
             }
             RefreshExits();
         }
@@ -572,9 +574,7 @@ namespace ColorMergeExit.Game
         {
             Vector3 barRest = dv.Bar.transform.localPosition;
             Vector3 arrowRest = dv.Arrow != null ? dv.Arrow.transform.localPosition : Vector3.zero;
-            var pipRest = new Vector3[dv.Pips.Length];
-            for (int i = 0; i < dv.Pips.Length; i++)
-                if (dv.Pips[i] != null) pipRest[i] = dv.Pips[i].transform.localPosition;
+            Vector3 nextRest = dv.NextSeg != null ? dv.NextSeg.transform.localPosition : Vector3.zero;
 
             const float dur = 0.32f;
             float t = 0f;
@@ -586,14 +586,12 @@ namespace ColorMergeExit.Game
                 Vector3 delta = dv.Outward * off;
                 dv.Bar.transform.localPosition = barRest + delta;
                 if (dv.Arrow != null) dv.Arrow.transform.localPosition = arrowRest + delta;
-                for (int i = 0; i < dv.Pips.Length; i++)
-                    if (dv.Pips[i] != null) dv.Pips[i].transform.localPosition = pipRest[i] + delta;
+                if (dv.NextSeg != null) dv.NextSeg.transform.localPosition = nextRest + delta;
                 yield return null;
             }
             dv.Bar.transform.localPosition = barRest;
             if (dv.Arrow != null) dv.Arrow.transform.localPosition = arrowRest;
-            for (int i = 0; i < dv.Pips.Length; i++)
-                if (dv.Pips[i] != null) dv.Pips[i].transform.localPosition = pipRest[i];
+            if (dv.NextSeg != null) dv.NextSeg.transform.localPosition = nextRest;
         }
 
         /// <summary>Exit juice: punch the door bar nearest the exit point and pop particles
@@ -658,18 +656,17 @@ namespace ColorMergeExit.Game
                 bool done = dv.Door.Done;
                 dv.Bar.color = done ? new Color(0.74f, 0.77f, 0.84f) // soft light (not dark) on the bright board
                     : _doorsHidden ? hiddenCol : VisualAssets.ToUnity(dv.Door.CurrentColor);
-                int i = 0;
-                if (!_doorsHidden)
+
+                // Next-colour band: paint the inner third with the immediate upcoming colour. Hidden on a
+                // finished door, in memory mode, or for a single-colour door (nothing upcoming).
+                CarColor? next = null;
+                if (!done && !_doorsHidden)
+                    foreach (var c in dv.Door.Upcoming) { next = c; break; }
+                if (dv.NextSeg != null)
                 {
-                    foreach (var c in dv.Door.Upcoming)
-                    {
-                        if (i >= MaxPips) break;
-                        dv.Pips[i].gameObject.SetActive(true);
-                        dv.Pips[i].color = VisualAssets.ToUnity(c);
-                        i++;
-                    }
+                    dv.NextSeg.gameObject.SetActive(next.HasValue);
+                    if (next.HasValue) dv.NextSeg.color = VisualAssets.ToUnity(next.Value);
                 }
-                for (; i < MaxPips; i++) dv.Pips[i].gameObject.SetActive(false);
             }
         }
     }

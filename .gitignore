@@ -15,6 +15,11 @@
 dev/**/bin/
 dev/**/obj/
 
+# Firebase desktop (Editor-play-only) runtime libs — >100MB, exceed GitHub's
+# file-size limit and are NOT used by iOS/Android device builds. Regenerated
+# locally by the Firebase Unity package / EDM4U resolve.
+Assets/Firebase/Plugins/x86_64/
+
 # OS / editor
 .DS_Store
 

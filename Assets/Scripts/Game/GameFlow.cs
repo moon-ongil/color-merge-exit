@@ -19,7 +19,9 @@ namespace ColorMergeExit.Game
         private void Awake()
         {
             Application.targetFrameRate = 60;
-            AdManager.Initialize();
+            StartCoroutine(GatherConsentThenInitAds());   // ATT + UMP consent BEFORE ads (see method)
+            Analytics.Init();   // Firebase (no-op unless the SDK is imported + FIREBASE_ANALYTICS defined)
+            ProgressStore.SyncFromCloud();   // pull/merge iCloud progress (no-op off signed iOS)
 
             // Restore the language chosen in the settings popup (default English). NOTE: the shipped
             // font atlas is subsetted to the baked (mostly English) glyph set, so non-Latin locales
@@ -52,6 +54,21 @@ namespace ColorMergeExit.Game
                 ShowSelect();
         }
 
+        // Show the iOS ATT prompt immediately, gather UMP (GDPR) consent, THEN initialize the ads SDK so
+        // the first ad request already carries the right consent. The UMP step has a short timeout so a
+        // no-op UMP (e.g. the simulator stubs) can never block ad initialization.
+        private System.Collections.IEnumerator GatherConsentThenInitAds()
+        {
+            Att.Request(null);   // iOS ATT prompt right away (no-op off iOS)
+
+            bool umpDone = false;
+            Consent.RequestUmp(() => umpDone = true);
+            float t = 0f;
+            while (!umpDone && t < 3f) { t += Time.unscaledDeltaTime; yield return null; }
+
+            AdManager.Initialize();
+        }
+
         public void ShowSelect()
         {
             AdManager.HideBanner();
@@ -73,7 +90,7 @@ namespace ColorMergeExit.Game
 
         private void NextLevel()
         {
-            AdManager.NotifyLevelComplete(); // interstitial every few cleared levels
+            AdManager.NotifyLevelComplete(_currentLevel); // interstitial every few cleared levels (skips early ones)
             int next = _currentLevel + 1;
             if (next <= ProgressStore.TotalLevels && ProgressStore.IsUnlocked(next))
                 PlayLevel(next);

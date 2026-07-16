@@ -17,7 +17,7 @@ namespace ColorMergeExit.Game
     {
         private sealed class BlockView { public Transform Root; public SpriteRenderer Sr; public SpriteRenderer Lock;
             public TMP_Text Fuse; public SpriteRenderer CycleRing; public SpriteRenderer NextPip; }
-        private sealed class DoorView { public Exit Door; public SpriteRenderer Bar; public SpriteRenderer[] Pips; public Vector3 Pos; public Vector3 Outward; }
+        private sealed class DoorView { public Exit Door; public SpriteRenderer Bar; public SpriteRenderer NextSeg; public SpriteRenderer Arrow; public SpriteRenderer[] Pips; public Vector3 Pos; public Vector3 Outward; }
 
         private readonly List<DoorView> _doorViews = new List<DoorView>();
         private const int MaxPips = 2;
@@ -191,25 +191,42 @@ namespace ColorMergeExit.Game
         private void BuildDoors()
         {
             _doorViews.Clear();
-            const float outset = 0.52f, thick = 0.42f;
+            // The door tab STRADDLES the board edge — its centre sits on the edge line (small `inset`
+            // inward), so roughly half the fat coloured bar is on the grey border and half is outside,
+            // reading as an "opening in the edge" without protruding off-screen or covering a whole
+            // cell. Only the `thick` (perpendicular) axis is fat; the lane-spanning length stays put so
+            // adjacent-lane doors never overlap. A big solid-white arrow points the exit direction.
+            const float inset = -0.40f, thick = 0.80f;
             foreach (var d in _board.Exits)
             {
                 float laneCenter = (d.LaneStart + d.LaneEnd) * 0.5f;
                 Vector3 pos, scale, outward;
                 if (d.Edge == Edge.Right)
-                { pos = new Vector3(_originX + _board.Width + outset, _originY - (laneCenter + 0.5f), 0f); scale = new Vector3(thick, d.Length - 0.1f, 1f); outward = Vector3.right; }
+                { pos = new Vector3(_originX + _board.Width - inset, _originY - (laneCenter + 0.5f), 0f); scale = new Vector3(thick, d.Length - 0.1f, 1f); outward = Vector3.right; }
                 else if (d.Edge == Edge.Left)
-                { pos = new Vector3(_originX - outset, _originY - (laneCenter + 0.5f), 0f); scale = new Vector3(thick, d.Length - 0.1f, 1f); outward = Vector3.left; }
+                { pos = new Vector3(_originX + inset, _originY - (laneCenter + 0.5f), 0f); scale = new Vector3(thick, d.Length - 0.1f, 1f); outward = Vector3.left; }
                 else if (d.Edge == Edge.Bottom)
-                { pos = new Vector3(_originX + laneCenter + 0.5f, _originY - _board.Height - outset, 0f); scale = new Vector3(d.Length - 0.1f, thick, 1f); outward = Vector3.down; }
+                { pos = new Vector3(_originX + laneCenter + 0.5f, _originY - _board.Height + inset, 0f); scale = new Vector3(d.Length - 0.1f, thick, 1f); outward = Vector3.down; }
                 else
-                { pos = new Vector3(_originX + laneCenter + 0.5f, _originY + outset, 0f); scale = new Vector3(d.Length - 0.1f, thick, 1f); outward = Vector3.up; }
+                { pos = new Vector3(_originX + laneCenter + 0.5f, _originY - inset, 0f); scale = new Vector3(d.Length - 0.1f, thick, 1f); outward = Vector3.up; }
 
                 var bar = MakeSprite($"Door_{d.Edge}_{d.LaneStart}", _boardRoot, VisualAssets.GlossyBar(), Color.white, 4);
                 bar.transform.localPosition = pos;
                 // 9-slice the door bar so its (small) rounded corners stay identical regardless of length
                 bar.drawMode = SpriteDrawMode.Sliced;
                 bar.size = new Vector2(scale.x, scale.y);
+
+                // exit-direction arrow: a big SOLID-WHITE chevron centred on the bar, rotated so it
+                // points OUTWARD — the way a matching block leaves.
+                float angleZ = Mathf.Atan2(outward.x, -outward.y) * Mathf.Rad2Deg;  // rotate the down-chevron to face outward
+                var arrowRot = Quaternion.Euler(0f, 0f, angleZ);
+                var chev = VisualAssets.Chevron();
+                float chW = Mathf.Max(0.0001f, chev.bounds.size.x);
+                float aScale = 0.9f / chW;
+                var arrow = MakeSprite("DoorArrow", _boardRoot, chev, Color.white, 7);
+                arrow.transform.localPosition = pos + new Vector3(0f, 0f, -0.03f);
+                arrow.transform.localRotation = arrowRot;
+                arrow.transform.localScale = new Vector3(aScale, aScale, 1f);
 
                 var pips = new SpriteRenderer[MaxPips];
                 for (int i = 0; i < MaxPips; i++)
@@ -219,7 +236,7 @@ namespace ColorMergeExit.Game
                     pip.transform.localPosition = pos + outward * (thick * 0.5f + 0.28f + i * 0.30f);
                     pips[i] = pip;
                 }
-                _doorViews.Add(new DoorView { Door = d, Bar = bar, Pips = pips, Pos = pos, Outward = outward });
+                _doorViews.Add(new DoorView { Door = d, Bar = bar, Arrow = arrow, Pips = pips, Pos = pos, Outward = outward });
             }
             RefreshExits();
         }
@@ -401,15 +418,43 @@ namespace ColorMergeExit.Game
         /// suggested direction so the player sees WHICH block and WHICH way.</summary>
         // partnerId >= 0 when the hinted move MERGES with another block: both get a gold ring so the
         // player clearly sees WHICH two blocks combine and which way to push.
+        // Active hint animation state. The hint NUDGES the real block's view to show the direction, so
+        // it must be cancellable + always end by resyncing the view to the block's LOGICAL position —
+        // otherwise a block moved (e.g. merged) while its hint is running gets its view slammed back to
+        // the stale start position, leaving view≠logical so taps miss it ("block won't move").
+        private Coroutine _hintCo;
+        private int _hintMoverId = -1;
+        private readonly List<GameObject> _hintRings = new List<GameObject>();
+
         public void HintEffect(int id, int dx, int dy, int partnerId = -1)
         {
             if (!_blocks.TryGetValue(id, out var bv) || bv.Root == null) return;
-            StartCoroutine(HintHighlight(id, partnerId, dx, dy));
+            StopHint();   // never overlap two hint animations
+            _hintMoverId = id;
+            _hintCo = StartCoroutine(HintHighlight(id, partnerId, dx, dy));
+        }
+
+        /// <summary>Cancel any running hint animation and snap the hinted block back to its LOGICAL
+        /// cell (never a stale captured position). Safe to call any time — call it the moment the
+        /// player touches the board so the nudge can't fight the drag or leave a desynced view.</summary>
+        public void StopHint()
+        {
+            if (_hintCo != null) { StopCoroutine(_hintCo); _hintCo = null; }
+            foreach (var r in _hintRings) if (r != null) Destroy(r);
+            _hintRings.Clear();
+            if (_hintMoverId >= 0) { ResyncBlock(_hintMoverId); _hintMoverId = -1; }
+        }
+
+        // Put a block's view exactly on its current logical cell (undoes any transient drag/hint nudge).
+        private void ResyncBlock(int id)
+        {
+            if (_blocks.TryGetValue(id, out var bv) && bv.Root != null && _board.TryGetBlock(id, out var b))
+                bv.Root.localPosition = TopLeftWorld(b.X, b.Y);
         }
 
         private IEnumerator HintHighlight(int moverId, int partnerId, int dx, int dy)
         {
-            var rings = new List<GameObject>();
+            _hintRings.Clear();
             void AddRing(int bid)
             {
                 var b = BlockById(bid);
@@ -418,7 +463,7 @@ namespace ColorMergeExit.Game
                 ring.transform.position = BlockCenterWorld(b);
                 var rb = ring.sprite.bounds.size;
                 ring.gameObject.AddComponent<Pulser>().BaseScale = 1.4f / Mathf.Max(0.0001f, rb.x);
-                rings.Add(ring.gameObject);
+                _hintRings.Add(ring.gameObject);
             }
             AddRing(moverId);
             if (partnerId >= 0) AddRing(partnerId);
@@ -437,11 +482,15 @@ namespace ColorMergeExit.Game
                     bv.Root.localPosition = basePos + dir * (0.26f * k);
                     yield return null;
                 }
-                if (bv.Root != null) bv.Root.localPosition = basePos;
             }
             else yield return new WaitForSeconds(2.6f);
 
-            foreach (var r in rings) if (r != null) Destroy(r);
+            // resync to the CURRENT logical cell (the block may have moved during the hint), never the
+            // captured start pos, then clean up.
+            ResyncBlock(moverId);
+            foreach (var r in _hintRings) if (r != null) Destroy(r);
+            _hintRings.Clear();
+            _hintCo = null; _hintMoverId = -1;
         }
 
         private Block BlockById(int id)
@@ -498,6 +547,53 @@ namespace ColorMergeExit.Game
                 yield return null;
             }
             if (t != null) t.localScale = baseScale;
+        }
+
+        // A wrong-colour block was shoved at a door — jolt THAT door (bar + arrow + pips) outward with a
+        // quick decaying shake so it clearly reads as "this isn't your exit".
+        public void DoorBump(int blockId, Vector3 worldDir)
+        {
+            Edge edge = worldDir.x > 0.5f ? Edge.Right : worldDir.x < -0.5f ? Edge.Left
+                      : worldDir.y < -0.5f ? Edge.Bottom : Edge.Top;
+            if (!_board.TryGetBlock(blockId, out var b)) return;
+            bool horiz = edge == Edge.Left || edge == Edge.Right;
+            DoorView match = null;
+            foreach (var dv in _doorViews)
+            {
+                if (dv.Door.Edge != edge || dv.Door.Done) continue;
+                foreach (var c in b.Cells())
+                    if (dv.Door.Covers(horiz ? c.Y : c.X)) { match = dv; break; }
+                if (match != null) break;
+            }
+            if (match != null) StartCoroutine(ShakeDoor(match));
+        }
+
+        private IEnumerator ShakeDoor(DoorView dv)
+        {
+            Vector3 barRest = dv.Bar.transform.localPosition;
+            Vector3 arrowRest = dv.Arrow != null ? dv.Arrow.transform.localPosition : Vector3.zero;
+            var pipRest = new Vector3[dv.Pips.Length];
+            for (int i = 0; i < dv.Pips.Length; i++)
+                if (dv.Pips[i] != null) pipRest[i] = dv.Pips[i].transform.localPosition;
+
+            const float dur = 0.32f;
+            float t = 0f;
+            while (t < dur)
+            {
+                t += Time.deltaTime;
+                float p = Mathf.Clamp01(t / dur);
+                float off = Mathf.Sin(p * Mathf.PI * 4f) * 0.14f * (1f - p); // ~2 decaying cycles, outward
+                Vector3 delta = dv.Outward * off;
+                dv.Bar.transform.localPosition = barRest + delta;
+                if (dv.Arrow != null) dv.Arrow.transform.localPosition = arrowRest + delta;
+                for (int i = 0; i < dv.Pips.Length; i++)
+                    if (dv.Pips[i] != null) dv.Pips[i].transform.localPosition = pipRest[i] + delta;
+                yield return null;
+            }
+            dv.Bar.transform.localPosition = barRest;
+            if (dv.Arrow != null) dv.Arrow.transform.localPosition = arrowRest;
+            for (int i = 0; i < dv.Pips.Length; i++)
+                if (dv.Pips[i] != null) dv.Pips[i].transform.localPosition = pipRest[i];
         }
 
         /// <summary>Exit juice: punch the door bar nearest the exit point and pop particles

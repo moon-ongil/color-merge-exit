@@ -8,7 +8,7 @@ UNITY="/Applications/Unity/Hub/Editor/6000.0.78f1/Unity.app/Contents/MacOS/Unity
 PROJ="/Users/moon/Developer/work/ongil/color-merge-exit"
 LIBS="/Applications/Unity/Hub/Editor/6000.0.78f1/PlaybackEngines/iOSSupport/Trampoline/Libraries"
 LOGDIR="${1:-/tmp}"
-BUNDLE="com.ongil.colormergeexit"
+BUNDLE="me.ongil.colormergeexit"
 
 echo "== Unity iOS build =="
 rm -rf "$PROJ/build/ios"
@@ -28,6 +28,13 @@ fi
 
 # AdMob's prebuilt arm64 plugin is device-tagged and misses UMP symbols; patch for the simulator.
 bash "$PROJ/dev/fix_admob_sim.sh"
+
+# Firebase's prebuilt C++ static libs (libFirebaseCpp*.a) are arm64 device-tagged too; re-tag for sim.
+FBDIR="$PROJ/build/ios/Libraries/Plugins/iOS/Firebase"
+if [ -d "$FBDIR" ]; then
+  echo "== fix Firebase libs for simulator =="
+  python3 "$PROJ/dev/fix_sim_plugin.py" "$FBDIR"/*.a
+fi
 
 echo "== xcodebuild (simulator, arm64) =="
 if [ -d Unity-iPhone.xcworkspace ]; then

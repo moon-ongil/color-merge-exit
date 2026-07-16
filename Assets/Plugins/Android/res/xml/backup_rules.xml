@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Android Auto Backup rules — backs up the game's PlayerPrefs (SharedPreferences) to the user's
+  Google account so progress survives reinstall / new device, with NO login (the OS uses the device's
+  Google account). This is the Android counterpart to iOS iCloud KVS.
+
+  NOTE: Android's default Auto Backup already includes SharedPreferences when android:allowBackup="true"
+  (Unity's default), so reinstall-restore works even without this file. This makes the intent explicit
+  and lets you customise later. To reference it, enable a Custom Main Manifest in
+  Player Settings ▸ Publishing Settings and add to <application>:
+      android:allowBackup="true"
+      android:fullBackupContent="@xml/backup_rules"
+-->
+<full-backup-content>
+    <!-- Unity stores PlayerPrefs in shared_prefs/<package>.v2.playerprefs.xml -->
+    <include domain="sharedpref" path="." />
+</full-backup-content>

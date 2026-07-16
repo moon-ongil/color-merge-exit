@@ -25,6 +25,7 @@ namespace ColorMergeExit.Game
 
         private TMP_Text _timer;
         private TMP_Text _banner;
+        private SpriteRenderer _bannerBg;   // dark toast behind the banner so text reads over any block
         private Transform _restartBtn, _undoBtn, _homeBtn, _settingsBtn;
         private Transform _hintBtn, _addTimeBtn, _forceSplitBtn;
         private SpriteRenderer _hintSr, _addTimeSr, _forceSplitSr;        // button body (tint)
@@ -101,12 +102,23 @@ namespace ColorMergeExit.Game
             // so short messages render huge while long ones (e.g. "TAP A BLOCK TO SPLIT") shrink to fit.
             _banner = Text("Banner", new Vector3(0f, 0.2f, 0f), Typography.Display);
             _banner.fontStyle = FontStyles.Bold;
-            _banner.enableWordWrapping = true;
-            _banner.rectTransform.sizeDelta = new Vector2(Mathf.Max(7f, _barW + 1f), 6f);
+            // Single line: no wrapping — autosize shrinks the font to fit the toast width instead of
+            // wrapping to two lines (e.g. "NO WAY OUT! 3" stays on one line).
+            _banner.enableWordWrapping = false;
+            _banner.rectTransform.sizeDelta = new Vector2(Mathf.Max(6f, _barW - 0.2f), 6f);   // narrower than the toast bg → side padding
             _banner.enableAutoSizing = true;
             _banner.fontSizeMin = Typography.Body;
             _banner.fontSizeMax = Typography.Display;
+            // Bold dark outline so the message stays legible over the busy, light-coloured board
+            // (the plain coral/gold fills washed out against the grid + blocks).
+            _banner.fontMaterial.SetFloat(ShaderUtilities.ID_OutlineWidth, 0.28f);
+            _banner.fontMaterial.SetColor(ShaderUtilities.ID_OutlineColor, new Color(0.12f, 0.10f, 0.20f, 1f));
             _banner.text = "";
+            // Dark translucent toast BEHIND the banner (just below its text order) so the message +
+            // countdown read clearly even when blocks sit behind them.
+            _bannerBg = Sprite("BannerBg", new Vector3(0f, 0.2f, 0.05f), new Color(0.12f, 0.10f, 0.20f, 0.60f), Sorting.Text - 1, VisualAssets.RoundedSquare());
+            Ui.Sliced(_bannerBg, _barW + 0.8f, 2.8f);
+            _bannerBg.gameObject.SetActive(false);
             _banner.gameObject.SetActive(false);
 
             // ---- Top corners: game-independent nav. Left column = Info (top) then Home (below);
@@ -165,6 +177,7 @@ namespace ColorMergeExit.Game
         // World positions of the item buttons (for tutorial coach-mark pointers).
         public Vector3 HintButtonWorld => _hintBtn != null ? _hintBtn.position : Vector3.zero;
         public Vector3 AddTimeButtonWorld => _addTimeBtn != null ? _addTimeBtn.position : Vector3.zero;
+        public Vector3 TimerWorld => _timer != null ? _timer.transform.position : new Vector3(0f, _barY, 0f);
         public Vector3 ForceSplitButtonWorld => _forceSplitBtn != null ? _forceSplitBtn.position : Vector3.zero;
 
         // Grant extra charges (e.g. from a rewarded ad).
@@ -246,9 +259,14 @@ namespace ColorMergeExit.Game
             _banner.text = text;
             _banner.color = color;
             _banner.gameObject.SetActive(true);
+            if (_bannerBg != null) _bannerBg.gameObject.SetActive(true);
         }
 
-        public void HideBanner() => _banner.gameObject.SetActive(false);
+        public void HideBanner()
+        {
+            _banner.gameObject.SetActive(false);
+            if (_bannerBg != null) _bannerBg.gameObject.SetActive(false);
+        }
 
         public HudButton ButtonAtWorld(Vector3 world)
         {
@@ -276,6 +294,7 @@ namespace ColorMergeExit.Game
         /// Win → NEXT / EXIT. Lose with hearts → RETRY / EXIT. Lose with no hearts → REFILL / EXIT.</summary>
         public void ShowResult(bool won, bool hasHearts, int stars, string title, Color titleColor)
         {
+            HideBanner();   // clear any centre banner (e.g. the dead-end countdown) so it can't show through
             if (_resultRoot != null) Destroy(_resultRoot);
             _resultRoot = new GameObject("ResultOverlay");
             _resultRoot.transform.SetParent(transform, false);
@@ -297,7 +316,7 @@ namespace ColorMergeExit.Game
                 var starSprite = (_sprites != null && _sprites.star != null) ? _sprites.star : VisualAssets.Star();
                 for (int i = 0; i < 3; i++)
                 {
-                    var ssr = Ui.Sprite(root, "R_Star" + i, new Vector3((i - 1) * 1.25f, 0.85f, -2f),
+                    var ssr = Ui.Sprite(root, "R_Star" + i, new Vector3((i - 1) * 1.25f, 1.0f, -2f),
                         i < stars ? Palette.StarGold : Palette.StarGrey, Sorting.DialogText, starSprite);
                     Ui.FitWidth(ssr, 1.05f);
                 }
@@ -306,8 +325,8 @@ namespace ColorMergeExit.Game
             _btnAId = won ? ResultButton.Next : (hasHearts ? ResultButton.Retry : ResultButton.Refill);
             _btnBId = ResultButton.Exit;
             Color aCol = won ? Palette.Green : (hasHearts ? Palette.Blue : Palette.Orange);
-            _resultA = BuildDialogButton(root, LabelFor(_btnAId), new Vector3(-1.9f, -0.6f, -2f), aCol, new Vector2(3.5f, 1.4f), Typography.Button);
-            _resultB = BuildDialogButton(root, "EXIT", new Vector3(1.9f, -0.6f, -2f), Palette.Grey, new Vector2(3.5f, 1.4f), Typography.Button);
+            _resultA = BuildDialogButton(root, LabelFor(_btnAId), new Vector3(-1.9f, -1.05f, -2f), aCol, new Vector2(3.5f, 1.4f), Typography.Button);
+            _resultB = BuildDialogButton(root, "EXIT", new Vector3(1.9f, -1.05f, -2f), Palette.Grey, new Vector2(3.5f, 1.4f), Typography.Button);
         }
 
         public void HideResult()
@@ -456,7 +475,7 @@ namespace ColorMergeExit.Game
         {
             if (!InfoOpen) return SettingsHit.None;
             if (_infoCloseBtn != null && _infoCloseBtn.Contains(world)) return SettingsHit.Close;
-            if (Ui.Hit(_infoCenter, world, 4.0f, 4.9f)) return SettingsHit.None;
+            if (Ui.Hit(_infoCenter, world, 3.5f, 4.9f)) return SettingsHit.None;
             return SettingsHit.Backdrop;
         }
 
@@ -471,11 +490,11 @@ namespace ColorMergeExit.Game
             back.transform.localScale = new Vector3(60f, Mathf.Max(60f, camHalfHeight * 3f), 1f);
 
             var psr = Ui.Sprite(root, "InfoPanel", _infoCenter + new Vector3(0f, 0f, -2f), Palette.Panel, Sorting.Panel, VisualAssets.DialogPanel());
-            Ui.Sliced(psr, 9.2f, 10.3f);
+            Ui.Sliced(psr, 6.9f, 10.3f);   // narrower than the screen → clear left/right margin
 
             MakeInfoText("I_Title", _infoCenter + new Vector3(0f, 4.35f, -3f), Typography.Heading,
                 Localization.Get(LocKeys.HowToPlay), Palette.TextDark);
-            MakeInfoText("I_MergeCap", _infoCenter + new Vector3(0f, 3.45f, -3f), Typography.Label,
+            MakeInfoText("I_MergeCap", _infoCenter + new Vector3(0f, 3.45f, -3f), 3.3f,
                 Localization.Get(LocKeys.MergeHint), Palette.TextMuted);
 
             // Merge recipes A + B = C, laid out in a 2-column grid (8 total: 3 secondaries + 5
@@ -494,13 +513,13 @@ namespace ColorMergeExit.Game
             float[] rowY = { 2.5f, 1.2f, -0.1f, -1.4f };
             for (int r = 0; r < recipes.Length; r++)
             {
-                float cx = (r % 2 == 0) ? -2.28f : 2.28f;
+                float cx = (r % 2 == 0) ? -1.68f : 1.68f;   // pulled inward so rows sit inside the narrower panel
                 var (a, b, c) = recipes[r];
                 MakeRecipeRow(_infoCenter + new Vector3(cx, rowY[r / 2], -3f), a, b, c);
             }
 
             // Split note: a mixed block on a ◄► splitter breaks back into its two colors
-            MakeInfoText("I_SplitCap", _infoCenter + new Vector3(0f, -2.62f, -3f), Typography.Label,
+            MakeInfoText("I_SplitCap", _infoCenter + new Vector3(0f, -2.62f, -3f), 3.3f,
                 Localization.Get(LocKeys.SplitHint), Palette.TextMuted);
 
             _infoCloseBtn = UiButton.Pill(root, "I_Close", _infoCenter + new Vector3(0f, -3.95f, -3f),
@@ -513,7 +532,7 @@ namespace ColorMergeExit.Game
         // One compact recipe: [A] + [B] = [C]. Wider gap so the +/= symbols read clearly apart.
         private void MakeRecipeRow(Vector3 center, CarColor a, CarColor b, CarColor c)
         {
-            const float dot = 0.98f, gap = 1.28f, sym = 3.2f;
+            const float dot = 0.88f, gap = 1.08f, sym = 3.0f;   // bigger dots; still fit inside the panel
             MakeColorDot(center + new Vector3(-gap, 0f, 0f), a, dot);
             MakeInfoText($"plus{center.x}{a}{b}", center + new Vector3(-gap * 0.5f, 0.02f, -1f), sym, "+", new Color(0.42f, 0.47f, 0.6f));
             MakeColorDot(center + new Vector3(0f, 0f, 0f), b, dot);

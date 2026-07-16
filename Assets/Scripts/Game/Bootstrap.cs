@@ -10,7 +10,7 @@ namespace ColorMergeExit.Game
     {
         // Dev/testing: pre-complete stages 1..N so you can jump straight to testing later
         // ones. Set to 0 before release.
-        private const int DevUnlockUpTo = 500;
+        private const int DevUnlockUpTo = 0;
 
         private void Awake()
         {

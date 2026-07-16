@@ -30,15 +30,15 @@ namespace ColorMergeExit.Game
         private GameSprites _sprites;
         private System.Action<int> _onSelect;
         private readonly List<(int level, Vector2 local)> _hit = new List<(int, Vector2)>();
-        private Vector3 _muteBtnPos;
-        private bool _hasMute;
+        private Vector3 _settingsBtnPos;
+        private bool _hasSettings;
         private float _halfH = 6.2f, _halfW = 3.5f, _safeTop = 6.2f;
 
         private Transform _content;   // holds the scrolling path
         private float _contentY, _offMin, _offMax;
 
         // pointer/drag state
-        private bool _pressing, _dragging, _pressedMute;
+        private bool _pressing, _dragging, _pressedSettings;
         private Vector3 _pressWorld;
         private float _pressContentY;
 
@@ -81,7 +81,26 @@ namespace ColorMergeExit.Game
             // focus the current level near screen centre so the player sees "where they are"
             int cur = Mathf.Clamp(ProgressStore.Unlocked, 1, n);
             _contentY = Mathf.Clamp(0f - NodeLocal(cur).y, _offMin, _offMax);
+            BuildFixedBackdrop();   // built once per Show; NOT touched by the per-scroll Rebuild
             Rebuild();
+        }
+
+        // The sky (gradient + bokeh + rainbow + clouds) is screen-fixed and lives under its own root so
+        // the frequent per-scroll Rebuild never destroys/recreates it — that recreation left a one-frame
+        // "ghost" of the old clouds on every drag.
+        private Transform _backdrop;
+        private void BuildFixedBackdrop()
+        {
+            if (_backdrop != null) Destroy(_backdrop.gameObject);
+            var root = new GameObject("Backdrop");
+            root.transform.SetParent(transform, false);
+            _backdrop = root.transform;
+
+            var bg = MakeSprite(_backdrop, "PageBg", new Vector3(0f, 0f, 1f), Color.white, -100);
+            bg.sprite = VisualAssets.SoftGradient();
+            bg.transform.localScale = new Vector3(30f, 30f, 1f);
+
+            BuildBackdrop();
         }
 
         private void FrameCamera()
@@ -103,13 +122,12 @@ namespace ColorMergeExit.Game
         private void Rebuild()
         {
             for (int i = transform.childCount - 1; i >= 0; i--)
-                Destroy(transform.GetChild(i).gameObject);
+            {
+                var child = transform.GetChild(i);
+                if (child == _backdrop) continue;   // the fixed sky persists across scroll rebuilds
+                Destroy(child.gameObject);
+            }
             _hit.Clear();
-
-            // bright gradient behind everything
-            var bg = MakeSprite(transform, "PageBg", new Vector3(0f, 0f, 1f), Color.white, -100);
-            bg.sprite = VisualAssets.SoftGradient();
-            bg.transform.localScale = new Vector3(30f, 30f, 1f);
 
             // scrolling content root (built first so the fixed header sorts above it)
             var contentGo = new GameObject("Content");
@@ -163,13 +181,20 @@ namespace ColorMergeExit.Game
             // a little from the very top so it clears the notch and doesn't feel crammed.
             // Band is 20 tall (half-height 10); its bottom edge = center - 10 = _safeTop - 2.18,
             // sitting just under the (single-line) tagline so the header stays as short as possible.
-            var band = MakeSprite(transform, "HeaderBand", new Vector3(0f, _safeTop + 7.82f, 0f),
+            var band = MakeSprite(transform, "HeaderBand", new Vector3(0f, _safeTop + 8.00f, 0f),
                 new Color(0.67f, 0.79f, 0.99f, 1f), 15);
-            band.transform.localScale = new Vector3(40f, 20f, 1f);   // covers the notch + header
+            band.transform.localScale = new Vector3(40f, 19.34f, 1f);   // covers the notch + header (bottom @ _safeTop-1.67)
+
+            // Soft gradient under the band's bottom edge: same band colour fading to transparent, so the
+            // hard seam melts into the scrolling content (and nodes fade out as they scroll under it).
+            var fade = MakeSprite(transform, "HeaderBandFade", new Vector3(0f, _safeTop - 1.67f, 0f),
+                new Color(0.67f, 0.79f, 0.99f, 1f), 14);
+            fade.sprite = VisualAssets.BandFade();                       // pivot at TOP, fades downward
+            fade.transform.localScale = new Vector3(40f, 2.2f, 1f);
 
             // Colourful title logo on ONE line: each letter a different vivid colour. Auto-sizes
             // down to fit the screen width, with a thin outline (reduced border) for a cleaner look.
-            var title = MakeText(transform, "Title", new Vector3(0f, _safeTop - 1.18f, 0f), 3.9f, 22);
+            var title = MakeText(transform, "Title", new Vector3(0f, _safeTop - 1.00f, 0f), 3.9f, 22);
             title.text = ColorfulTitle("COLOR MERGE EXIT");
             title.enableAutoSizing = true;
             title.fontSizeMin = 2.2f;
@@ -181,26 +206,181 @@ namespace ColorMergeExit.Game
             title.fontMaterial.SetFloat(ShaderUtilities.ID_FaceDilate, -0.14f);
 
             // tagline sits close under the title (small gap)
-            var tag = MakeText(transform, "Tagline", new Vector3(0f, _safeTop - 1.72f, 0f), 1.9f, 22);
+            var tag = MakeText(transform, "Tagline", new Vector3(0f, _safeTop - 1.34f, 0f), 1.9f, 22);
             tag.text = Localization.Get(LocKeys.Tagline);
             tag.color = new Color(0.30f, 0.35f, 0.52f);
 
-            bool muted = AudioManager.Instance != null && AudioManager.Instance.Muted;
-            var soundSp = VisualAssets.UiIcon(muted ? 1 : 0, 1);
-            _hasMute = soundSp != null || (_sprites != null && _sprites.btnSettings != null);
-            if (_hasMute)
-            {
-                _muteBtnPos = new Vector3(_halfW - 0.65f, _safeTop - 0.34f, 0f);
-                var sp = soundSp ?? _sprites.btnSettings;
-                var mb = MakeSprite(transform, "MuteBtn", _muteBtnPos,
-                    (soundSp == null && muted) ? new Color(1f, 1f, 1f, 0.3f) : Color.white, 16);
-                mb.sprite = sp;
-                var b = sp.bounds.size;
-                float sc = 0.54f;   // small, unobtrusive sound button
-                mb.transform.localScale = new Vector3(b.x > 0 ? sc / b.x : 1f, b.y > 0 ? sc / b.y : 1f, 1f);
-            }
+            // Top-right SETTINGS gear — opens the home settings popup (sound + cloud-save status).
+            _hasSettings = true;
+            _settingsBtnPos = new Vector3(_halfW - 0.65f, _safeTop - 0.12f, 0f);
+            var gearBg = MakeSprite(transform, "SettingsBtn", _settingsBtnPos, Palette.Blue, 16);
+            gearBg.sprite = VisualAssets.RoundedSquare(); gearBg.drawMode = SpriteDrawMode.Sliced; gearBg.size = new Vector2(0.68f, 0.68f);
+            var gear = MakeSprite(transform, "SettingsGear", _settingsBtnPos + new Vector3(0f, 0f, -0.1f), Color.white, 17);
+            gear.sprite = VisualAssets.GearIcon();
+            var gearB = gear.sprite.bounds.size;
+            float gsc = 0.42f;
+            gear.transform.localScale = new Vector3(gearB.x > 0 ? gsc / gearB.x : 1f, gearB.y > 0 ? gsc / gearB.y : 1f, 1f);
 
             BuildHearts();
+        }
+
+        // Large, soft, translucent pastel blobs scattered over the gradient. Positions are given as
+        // fractions of the camera half-extents so they spread nicely on any aspect. Sorted just above
+        // the page gradient (-90) and well below the scrolling trail, so they read as ambient depth.
+        private static readonly (float fx, float fy, float scale, float r, float g, float b, float a)[] _blobSpec =
+        {
+            (-0.58f,  0.34f, 9.0f, 1.00f, 0.72f, 0.80f, 0.17f),  // pink
+            ( 0.72f,  0.12f, 10.0f, 0.70f, 0.95f, 0.82f, 0.15f), // mint
+            (-0.78f, -0.30f, 8.5f, 0.80f, 0.75f, 0.98f, 0.18f),  // lavender
+            ( 0.60f, -0.58f, 9.5f, 1.00f, 0.83f, 0.66f, 0.16f),  // peach
+            (-0.22f, -0.90f, 8.5f, 0.68f, 0.86f, 1.00f, 0.16f),  // sky
+            ( 0.30f,  0.66f, 7.5f, 1.00f, 0.95f, 0.68f, 0.14f),  // lemon
+        };
+
+        // live blobs for the gentle drift animation (rebuilt on each Rebuild → re-registered here)
+        private readonly List<(Transform t, Vector3 basePos, float scale, float seed)> _blobs =
+            new List<(Transform, Vector3, float, float)>();
+
+        // Clouds drifting horizontally across the sky (the visible motion the menu was missing).
+        //   fy = height as a fraction of the half-height; scale; speed (units/sec, sign = direction).
+        private static readonly (float fy, float scale, float speed)[] _cloudSpec =
+        {
+            ( 0.52f, 2.6f,  0.36f),
+            ( 0.22f, 3.2f, -0.26f),
+            (-0.10f, 2.1f,  0.22f),
+            (-0.40f, 2.4f, -0.32f),
+        };
+        private readonly List<(Transform t, float baseY, float speed, float phase)> _clouds =
+            new List<(Transform, float, float, float)>();
+
+        private void BuildBackdrop()
+        {
+            _blobs.Clear();
+            for (int i = 0; i < _blobSpec.Length; i++)
+            {
+                var s = _blobSpec[i];
+                var pos = new Vector3(s.fx * _halfW, s.fy * _halfH, 0.5f);
+                var blob = MakeSprite(_backdrop, "Blob", pos, new Color(s.r, s.g, s.b, s.a), -90);
+                blob.sprite = VisualAssets.SoftBlob();
+                blob.transform.localScale = new Vector3(s.scale, s.scale, 1f);
+                _blobs.Add((blob.transform, pos, s.scale, i * 1.7f));   // per-blob phase so they drift out of sync
+            }
+
+            // Fixed rainbow rising from the bottom edge — a splash of colour for the "bring colour back"
+            // theme. Behind the path (nodes/dots sort above it) but above the blobs.
+            float rw = 2f * _halfW * 1.15f;                       // slightly wider than the screen
+            var rainbow = MakeSprite(_backdrop, "Rainbow", new Vector3(0f, -_halfH - 0.6f, 0.4f), Color.white, -80);
+            rainbow.sprite = VisualAssets.SoftRainbow();
+            rainbow.transform.localScale = new Vector3(rw, rw, 1f);
+
+            // Drifting clouds in the sky above the rainbow (behind the path).
+            _clouds.Clear();
+            for (int i = 0; i < _cloudSpec.Length; i++)
+            {
+                var c = _cloudSpec[i];
+                var cloud = MakeSprite(_backdrop, "Cloud", new Vector3(0f, c.fy * _halfH, 0.3f),
+                    new Color(1f, 1f, 1f, 0.9f), -70);
+                cloud.sprite = VisualAssets.SoftCloud();
+                cloud.transform.localScale = new Vector3(c.scale * 1.4f, c.scale, 1f);   // wide cloud
+                _clouds.Add((cloud.transform, c.fy * _halfH, c.speed, i * 2.3f));
+            }
+        }
+
+        // Blobs breathe gently; clouds slide horizontally and wrap around — the sky's visible motion.
+        // Uses unscaled real time (the menu never changes Time.timeScale).
+        private void AnimateBackdrop()
+        {
+            float tt = Time.unscaledTime;
+            foreach (var (t, basePos, scale, seed) in _blobs)
+            {
+                if (t == null) continue;
+                float dx = 0.8f * Mathf.Sin(tt * 0.32f + seed);
+                float dy = 0.6f * Mathf.Sin(tt * 0.24f + seed * 1.3f);
+                t.localPosition = new Vector3(basePos.x + dx, basePos.y + dy, basePos.z);
+                float br = 1f + 0.09f * Mathf.Sin(tt * 0.38f + seed);   // gentle breathing
+                t.localScale = new Vector3(scale * br, scale * br, 1f);
+            }
+
+            float bound = _halfW + 2.8f;    // wrap just off-screen so clouds glide fully across
+            float span = 2f * bound;
+            foreach (var (t, baseY, speed, phase) in _clouds)
+            {
+                if (t == null) continue;
+                float x = Mathf.Repeat(phase * bound + speed * tt + bound, span) - bound;
+                float bob = 0.10f * Mathf.Sin(tt * 0.5f + phase);
+                t.localPosition = new Vector3(x, baseY + bob, 0.3f);
+            }
+        }
+
+        // ---- home settings popup (opened by the top-right gear): sound toggle + cloud-save status ----
+        private GameObject _settingsRoot;
+        private readonly Vector3 _setPanelPos = new Vector3(0f, 0.4f, 0f);
+        private Vector3 _soundTogglePos, _setClosePos, _privacyPos, _termsPos;
+        private bool SettingsOpen => _settingsRoot != null && _settingsRoot.activeSelf;
+
+        private void HideSettings() { if (_settingsRoot != null) { Destroy(_settingsRoot); _settingsRoot = null; } }
+
+        // Open the hosted legal doc in the browser, in the player's language (Korean default, else English).
+        private void OpenLegal(string doc)
+        {
+            string suffix = Localization.Current == Locale.Ko ? "" : "?lang=en";
+            Application.OpenURL($"https://color-merge-exit.ongil.me/legal/{doc}{suffix}");
+        }
+
+        private void ShowSettings()
+        {
+            if (_settingsRoot != null) Destroy(_settingsRoot);
+            _settingsRoot = new GameObject("HomeSettings");
+            _settingsRoot.transform.SetParent(transform, false);
+            var t = _settingsRoot.transform;
+
+            var back = MakeSprite(t, "S_Back", new Vector3(0f, 0f, 0.5f), Palette.Scrim(0.55f), 200);
+            back.transform.localScale = new Vector3(60f, 60f, 1f);
+
+            var panel = MakeSprite(t, "S_Panel", _setPanelPos + new Vector3(0f, 0f, -0.2f), Palette.Panel, 201);
+            panel.sprite = VisualAssets.DialogPanel();
+            panel.drawMode = SpriteDrawMode.Sliced; panel.size = new Vector2(5.2f, 6.9f);   // taller: fits the legal links
+
+            var title = MakeText(t, "S_Title", _setPanelPos + new Vector3(0f, 2.75f, -0.3f), 4.0f, 203);
+            title.text = "SETTINGS"; title.color = Palette.TextDark; title.fontStyle = FontStyles.Bold;
+
+            const float lblX = -1.95f, valX = 1.5f;   // lblX = the shared LEFT edge of both labels
+
+            // Sound row: label + ON/OFF toggle
+            var soundLbl = MakeText(t, "S_SoundLbl", _setPanelPos + new Vector3(lblX, 1.6f, -0.3f), 3.0f, 203);
+            soundLbl.text = "SOUND"; soundLbl.color = Palette.TextDark;
+            soundLbl.alignment = TextAlignmentOptions.Left;
+            soundLbl.rectTransform.pivot = new Vector2(0f, 0.5f); soundLbl.rectTransform.sizeDelta = new Vector2(3.2f, 1f);
+            bool soundOn = !(AudioManager.Instance != null && AudioManager.Instance.Muted);
+            _soundTogglePos = _setPanelPos + new Vector3(valX, 1.6f, 0f);
+            var togBg = MakeSprite(t, "S_SoundTog", _soundTogglePos + new Vector3(0f, 0f, -0.2f),
+                soundOn ? Palette.Blue : new Color(0.62f, 0.65f, 0.74f), 202);
+            togBg.sprite = VisualAssets.RoundedSquare(); togBg.drawMode = SpriteDrawMode.Sliced; togBg.size = new Vector2(1.4f, 0.78f);
+            var togTxt = MakeText(t, "S_SoundTxt", _soundTogglePos + new Vector3(0f, 0f, -0.3f), 2.9f, 203);
+            togTxt.text = soundOn ? "ON" : "OFF"; togTxt.color = Color.white; togTxt.fontStyle = FontStyles.Bold;
+
+            // Cloud-save row: label + platform status (no login — iCloud/Google handle it via the OS account)
+            var cloudLbl = MakeText(t, "S_CloudLbl", _setPanelPos + new Vector3(lblX, 0.75f, -0.3f), 3.0f, 203);
+            cloudLbl.text = "CLOUD SAVE"; cloudLbl.color = Palette.TextDark;
+            cloudLbl.alignment = TextAlignmentOptions.Left;
+            cloudLbl.rectTransform.pivot = new Vector2(0f, 0.5f); cloudLbl.rectTransform.sizeDelta = new Vector2(3.2f, 1f);
+            var cloudStat = MakeText(t, "S_CloudStat", _setPanelPos + new Vector3(valX, 0.75f, -0.3f), 2.9f, 203);
+            cloudStat.text = CloudSave.Available ? "iCloud" : "On";
+            cloudStat.color = new Color(0.24f, 0.66f, 0.42f); cloudStat.fontStyle = FontStyles.Bold;
+
+            // Legal links: open the hosted privacy policy / terms in the browser (store compliance).
+            _privacyPos = _setPanelPos + new Vector3(0f, -0.2f, 0f);
+            var privacy = MakeText(t, "S_Privacy", _privacyPos + new Vector3(0f, 0f, -0.3f), 2.7f, 203);
+            privacy.text = "Privacy Policy"; privacy.color = Palette.Blue; privacy.fontStyle = FontStyles.Underline;
+            _termsPos = _setPanelPos + new Vector3(0f, -1.0f, 0f);
+            var terms = MakeText(t, "S_Terms", _termsPos + new Vector3(0f, 0f, -0.3f), 2.7f, 203);
+            terms.text = "Terms of Service"; terms.color = Palette.Blue; terms.fontStyle = FontStyles.Underline;
+
+            _setClosePos = _setPanelPos + new Vector3(0f, -2.4f, 0f);
+            var closeBg = MakeSprite(t, "S_Close", _setClosePos + new Vector3(0f, 0f, -0.2f), Palette.Blue, 202);
+            closeBg.sprite = VisualAssets.RoundedSquare(); closeBg.drawMode = SpriteDrawMode.Sliced; closeBg.size = new Vector2(3.2f, 0.98f);
+            var closeTxt = MakeText(t, "S_CloseTxt", _setClosePos + new Vector3(0f, 0f, -0.3f), 3.3f, 203);
+            closeTxt.text = "CLOSE"; closeTxt.color = Color.white; closeTxt.fontStyle = FontStyles.Bold;
         }
 
         // ---- lives / hearts (top-left of the header) ----
@@ -214,23 +394,25 @@ namespace ColorMergeExit.Game
             foreach (var g in _heartGos) if (g != null) Destroy(g);
             _heartGos.Clear();
             _shownHearts = HeartStore.Current;
-            // Compact "♥ ×N   +1 m:ss" row in the top-left: one heart icon, the count, then the
-            // refill timer right beside it (bigger, per request) — clear of the centre notch.
-            float hx = -_halfW + 0.55f, hy = _safeTop - 0.42f;
-            var h = MakeSprite(transform, "Heart", new Vector3(hx, hy, 0f), Palette.HeartRed, 22);
+            // Bare heart at the top-left (mirrors the settings gear's x/height), with the life COUNT
+            // (just the number) + refill timer to its right.
+            float cx = -_halfW + 0.65f, cy = _safeTop - 0.12f;   // mirror of _settingsBtnPos
+            var h = MakeSprite(transform, "Heart", new Vector3(cx, cy, 0f), Palette.HeartRed, 22);
             h.sprite = VisualAssets.Heart();
             var hb = h.sprite.bounds.size;
-            float hs = 0.48f / Mathf.Max(0.0001f, hb.x);
+            float hs = 0.5f / Mathf.Max(0.0001f, hb.x);
             h.transform.localScale = new Vector3(hs, hs, 1f);
             _heartGos.Add(h.gameObject);
 
-            _heartCount = MakeText(transform, "HeartCount", new Vector3(hx + 0.6f, hy, 0f), Typography.Label, 22);
+            _heartCount = MakeText(transform, "HeartCount", new Vector3(cx + 0.6f, cy, 0f), Typography.Label, 22);
+            _heartCount.alignment = TextAlignmentOptions.Left;
+            _heartCount.rectTransform.pivot = new Vector2(0f, 0.5f);
+            _heartCount.rectTransform.sizeDelta = new Vector2(2f, 1f);
             _heartCount.color = new Color(0.30f, 0.34f, 0.5f);
             _heartGos.Add(_heartCount.gameObject);
 
-            // Timer LEFT-aligned (pivot at its left edge) so it hugs the count — the gap stays tight
-            // regardless of text width, instead of a centred rect leaving a big blank beside "xN".
-            _heartTimer = MakeText(transform, "HeartTimer", new Vector3(hx + 0.98f, hy, 0f), 2.6f, 22);
+            // Timer LEFT-aligned (pivot at its left edge) so it hugs the count.
+            _heartTimer = MakeText(transform, "HeartTimer", new Vector3(cx + 1.05f, cy, 0f), 2.6f, 22);
             _heartTimer.alignment = TextAlignmentOptions.Left;
             _heartTimer.rectTransform.pivot = new Vector2(0f, 0.5f);
             _heartTimer.rectTransform.sizeDelta = new Vector2(6f, 4f);
@@ -241,7 +423,7 @@ namespace ColorMergeExit.Game
 
         private void UpdateHeartTimer()
         {
-            if (_heartCount != null) _heartCount.text = $"x{HeartStore.Current}";
+            if (_heartCount != null) _heartCount.text = $"{HeartStore.Current}";   // count only, no "x"
             if (_heartTimer == null) return;
             if (HeartStore.Current >= HeartStore.Max) _heartTimer.text = "";
             else { int s = HeartStore.SecondsToNext; _heartTimer.text = $"+1  {s / 60}:{s % 60:00}"; }
@@ -355,7 +537,10 @@ namespace ColorMergeExit.Game
                 return;
             }
 
-            // 3 stars in a small arc just below the node
+            // 3 stars in a small arc just below the node — only once the level has been cleared.
+            // An uncleared level (stars == 0) shows no tray at all, so the early screens read clean
+            // and the star row never looks like a pre-earned reward.
+            if (stars <= 0) return;
             for (int st = 0; st < 3; st++)
             {
                 var sp = MakeSprite(_content, $"Star{level}_{st}",
@@ -374,6 +559,8 @@ namespace ColorMergeExit.Game
 
         private void Update()
         {
+            AnimateBackdrop();   // gentle bokeh drift
+
             // tick the hearts refill countdown (and rebuild the row when a heart refills)
             _heartTick += Time.deltaTime;
             if (_heartTick >= 1f)
@@ -403,6 +590,28 @@ namespace ColorMergeExit.Game
             pos.z = 10f;
             var world = _cam.ScreenToWorldPoint(pos);
 
+            // home settings popup is modal
+            if (SettingsOpen)
+            {
+                if (up)
+                {
+                    if (Mathf.Abs(world.x - _soundTogglePos.x) <= 1.0f && Mathf.Abs(world.y - _soundTogglePos.y) <= 0.55f)
+                    {
+                        AudioManager.Instance?.ToggleMute();
+                        ShowSettings();   // rebuild the popup to refresh the ON/OFF label
+                    }
+                    else if (Mathf.Abs(world.x - _privacyPos.x) <= 1.9f && Mathf.Abs(world.y - _privacyPos.y) <= 0.38f)
+                    { AudioManager.Instance?.Tap(); OpenLegal("privacy-policy"); }
+                    else if (Mathf.Abs(world.x - _termsPos.x) <= 1.9f && Mathf.Abs(world.y - _termsPos.y) <= 0.38f)
+                    { AudioManager.Instance?.Tap(); OpenLegal("terms-of-service"); }
+                    else if (Mathf.Abs(world.x - _setClosePos.x) <= 1.6f && Mathf.Abs(world.y - _setClosePos.y) <= 0.55f)
+                    { AudioManager.Instance?.Tap(); HideSettings(); }
+                    else if (!(Mathf.Abs(world.x - _setPanelPos.x) <= 2.7f && Mathf.Abs(world.y - _setPanelPos.y) <= 3.5f))
+                        HideSettings();   // tap outside the panel dismisses
+                }
+                return; // consume all input while open
+            }
+
             // out-of-hearts popup is modal
             if (NoHeartsOpen)
             {
@@ -429,14 +638,14 @@ namespace ColorMergeExit.Game
                 _dragging = false;
                 _pressWorld = world;
                 _pressContentY = _contentY;
-                _pressedMute = _hasMute &&
-                    Mathf.Abs(world.x - _muteBtnPos.x) <= 0.6f && Mathf.Abs(world.y - _muteBtnPos.y) <= 0.6f;
+                _pressedSettings = _hasSettings &&
+                    Mathf.Abs(world.x - _settingsBtnPos.x) <= 0.6f && Mathf.Abs(world.y - _settingsBtnPos.y) <= 0.6f;
             }
             else if (held && _pressing)
             {
                 float dy = world.y - _pressWorld.y;
                 if (!_dragging && Mathf.Abs(dy) > DragThreshold) _dragging = true;
-                if (_dragging && !_pressedMute)
+                if (_dragging && !_pressedSettings)
                 {
                     _contentY = Mathf.Clamp(_pressContentY + dy, _offMin, _offMax);   // grab-scroll
                     if (_content != null) _content.localPosition = new Vector3(0f, _contentY, 0f);
@@ -445,11 +654,11 @@ namespace ColorMergeExit.Game
             else if (up && _pressing)
             {
                 _pressing = false;
-                if (_pressedMute && !_dragging &&
-                    Mathf.Abs(world.x - _muteBtnPos.x) <= 0.6f && Mathf.Abs(world.y - _muteBtnPos.y) <= 0.6f)
+                if (_pressedSettings && !_dragging &&
+                    Mathf.Abs(world.x - _settingsBtnPos.x) <= 0.6f && Mathf.Abs(world.y - _settingsBtnPos.y) <= 0.6f)
                 {
-                    AudioManager.Instance?.ToggleMute();
-                    Rebuild();   // just swap the icon; keep current scroll (don't jump to current level)
+                    AudioManager.Instance?.Tap();
+                    ShowSettings();
                     return;
                 }
                 if (_dragging) { Rebuild(); return; }   // rebuild the visible window after a scroll

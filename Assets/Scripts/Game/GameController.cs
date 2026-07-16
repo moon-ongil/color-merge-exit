@@ -34,9 +34,12 @@ namespace ColorMergeExit.Game
         private int _maxR, _maxL, _maxD, _maxU;
         private bool _exR, _exL, _exD, _exU;
         private bool _mgR, _mgL, _mgD, _mgU;
+        private bool _doorR, _doorL, _doorD, _doorU;   // a wrong-colour door in each dir → bounce
         private HudButton _pressedButton = HudButton.None;
         private Coroutine _snapTween;
-        private GameObject _celebration;
+        // TEMP: input diagnostics for the "merged block sometimes won't move" bug. Logs are tagged
+        // [MERGEDBG] so they can be grepped from the device console; set false to silence.
+        private const bool DebugInput = true;
         private TutorialOverlay _tutorial;
         private bool TutorialBlocking => _tutorial != null && _tutorial.Blocking;
 
@@ -55,18 +58,21 @@ namespace ColorMergeExit.Game
             bgsr.sortingOrder = -100;
         }
 
-        public void Play(int levelId) { _levelId = levelId; StartLevel(); }
+        private int _attempt;   // 1 on first play, +1 per retry of the same level (analytics)
+
+        public void Play(int levelId) { _levelId = levelId; _attempt = 0; StartLevel(); }
 
         private void StartLevel()
         {
             _ended = false; _won = false; _dragging = false; _pressedButton = HudButton.None;
             _hintReady = false; _hintPending = false;
             if (_tutorial != null) _tutorial.Stop();   // never carry a stale coach-mark into a new level
-            _deadEndResult = -1; _lastAppliedGen = -1; _checkGen++; // discard any in-flight check from the last level
-            if (_celebration != null) Destroy(_celebration);
+            _deadEndResult = -1; _lastAppliedGen = -1; _checkGen++; _deadEndFailAt = -1f; // discard any in-flight check/grace from the last level
 
             _level = LevelRepository.Load(_levelId);
             _session = new GameSession(_level);
+            _attempt++;
+            Analytics.LevelStart(_levelId, _attempt);
             _board.Build(_session.Board, _sprites);
             FrameCamera();
             _hud.Build(_board.Width, _board.Height, _sprites, _levelId, _cam.orthographicSize, _level.timeLimitSeconds);
@@ -74,6 +80,7 @@ namespace ColorMergeExit.Game
             _hud.HideBanner();
 
             StopAllCoroutines();
+            _board.StopHint();   // BoardView coroutines aren't stopped by our StopAllCoroutines
             _board.SetDoorsHidden(false);
             if (_level.memorize)
                 StartCoroutine(MemorizeThenStart());
@@ -196,9 +203,10 @@ namespace ColorMergeExit.Game
         private void Update()
         {
             if (_session == null) return;
-            // popups AND the tutorial coach-mark pause the clock
+            // popups, the tutorial coach-mark, AND a full-screen ad all pause the clock (watching a
+            // rewarded ad must never burn the level timer)
             if (_session.State == SessionState.Playing && !_hud.SettingsOpen && !_hud.InfoOpen
-                && !TutorialBlocking && !_hud.ConfirmOpen)
+                && !TutorialBlocking && !_hud.ConfirmOpen && !AdManager.IsShowing)
             {
                 _session.Tick(Time.deltaTime);
                 _hud.SetTime(_session.TimeRemaining);
@@ -206,6 +214,7 @@ namespace ColorMergeExit.Game
             }
             ApplyDeadEndResult();
             ApplyHintResult();
+            HandleDeadEndGrace();
             if (TutorialBlocking) return;   // swallow game input while a coach-mark is up
             HandlePointer();
         }
@@ -270,7 +279,7 @@ namespace ColorMergeExit.Game
             _session.AddTime(HudView.AddTimeSeconds);
             _hud.SetTime(_session.TimeRemaining);
             AudioManager.Instance?.Merge(1.35f);
-            ParticleBurst.Emit(new Vector3(0f, 0.5f, 0f), new Color(0.4f, 0.9f, 0.55f), 24, 7f);
+            ParticleBurst.Emit(_hud.TimerWorld, new Color(0.4f, 0.9f, 0.55f), 24, 7f);   // burst at the timer, not board centre
         }
 
         // force-split item: one tap splits EVERY splittable (mixed-colour) block on the board at once.
@@ -392,6 +401,7 @@ namespace ColorMergeExit.Game
 
             if (_board.TryScreenToCell(_cam, screenPos, out int cx, out int cy))
             {
+                _board.StopHint();   // cancel any hint nudge + resync so it can't fight/desync this drag
                 var b = _board.BlockAtCell(cx, cy);
 
                 if (b != null)
@@ -409,6 +419,21 @@ namespace ColorMergeExit.Game
                     _maxL = _session.Board.MaxSlide(b.Id, -1, 0, out _exL, out _mgL, out _);
                     _maxD = _session.Board.MaxSlide(b.Id, 0, 1, out _exD, out _mgD, out _);
                     _maxU = _session.Board.MaxSlide(b.Id, 0, -1, out _exU, out _mgU, out _);
+                    _doorR = _session.Board.BlockedDoorAhead(b.Id, 1, 0);
+                    _doorL = _session.Board.BlockedDoorAhead(b.Id, -1, 0);
+                    _doorD = _session.Board.BlockedDoorAhead(b.Id, 0, 1);
+                    _doorU = _session.Board.BlockedDoorAhead(b.Id, 0, -1);
+                    if (DebugInput) Debug.Log($"[MERGEDBG] PICK id={b.Id} color={b.Color} locked={b.Locked} axis={b.Axis} cell=({cx},{cy}) maxR={_maxR} maxL={_maxL} maxD={_maxD} maxU={_maxU} ex(RLDU)={_exR}{_exL}{_exD}{_exU} mg(RLDU)={_mgR}{_mgL}{_mgD}{_mgU} snap={( _snapTween!=null)}");
+                }
+                else if (DebugInput)
+                {
+                    var sb = new System.Text.StringBuilder();
+                    foreach (var bl in _session.Board.Blocks)
+                    {
+                        _board.TryGetBlockLocalPosition(bl.Id, out var vp);
+                        sb.Append($" id{bl.Id}:logical({bl.X},{bl.Y})/view{vp.ToString("F2")}");
+                    }
+                    Debug.Log($"[MERGEDBG] PICK-MISS cell=({cx},{cy}) state={_session.State} snapActive={(_snapTween!=null)} blocks:{sb}");
                 }
             }
         }
@@ -481,6 +506,7 @@ namespace ColorMergeExit.Game
             if (!_dragging) return;
             _dragging = false;
             bool moved = false;
+            Vector3 bounceDir = Vector3.zero;   // set when the player shoves a block at a wrong-colour door
 
             if (_session.Board.TryGetBlock(_dragBlockId, out var b) && _session.State == SessionState.Playing)
             {
@@ -493,6 +519,9 @@ namespace ColorMergeExit.Game
                     if (pR && off >= _maxR + 0.5f) stepX = _maxR + 1;
                     else if (pL && off <= -(_maxL + 0.5f)) stepX = -(_maxL + 1);
                     else stepX = Mathf.RoundToInt(Mathf.Clamp(off, -_maxL, _maxR));
+                    // shoved past a door it can't use → bounce (world x: right = +, left = -)
+                    if (!pR && _doorR && gdx >= _maxR + 0.5f) bounceDir = Vector3.right;
+                    else if (!pL && _doorL && gdx <= -(_maxL + 0.5f)) bounceDir = Vector3.left;
                 }
                 else
                 {
@@ -501,6 +530,9 @@ namespace ColorMergeExit.Game
                     if (pD && off >= _maxD + 0.5f) stepY = _maxD + 1;
                     else if (pU && off <= -(_maxU + 0.5f)) stepY = -(_maxU + 1);
                     else stepY = Mathf.RoundToInt(Mathf.Clamp(off, -_maxU, _maxD));
+                    // grid +y = down (screen), so a bottom-door shove bounces toward world -y and vice versa
+                    if (!pD && _doorD && gdy >= _maxD + 0.5f) bounceDir = Vector3.down;
+                    else if (!pU && _doorU && gdy <= -(_maxU + 0.5f)) bounceDir = Vector3.up;
                 }
 
                 if (stepX != 0 || stepY != 0)
@@ -508,6 +540,7 @@ namespace ColorMergeExit.Game
                     var color = b.Color;
                     var center = _board.BlockCenter(b);
                     var result = _session.Move(_dragBlockId, stepX, stepY);
+                    if (DebugInput) Debug.Log($"[MERGEDBG] MOVE id={_dragBlockId} step=({stepX},{stepY}) result={result} state={_session.State}");
                     if (result == MoveResult.Exited)
                     {
                         AudioManager.Instance?.Exit();
@@ -558,7 +591,20 @@ namespace ColorMergeExit.Game
             if (haveFrom && _board.TryGetBlockLocalPosition(_dragBlockId, out var toPos))
             {
                 if (_snapTween != null) StopCoroutine(_snapTween);
-                _snapTween = StartCoroutine(SnapEase(_dragBlockId, fromPos, toPos, 0.09f));
+                if (bounceDir != Vector3.zero)
+                {
+                    AudioManager.Instance?.Slide();   // soft "bump" against the wrong-colour door
+                    _board.DoorBump(_dragBlockId, bounceDir);   // shake the door it hit
+                    _snapTween = StartCoroutine(BounceEase(_dragBlockId, toPos, bounceDir, 0.26f));
+                }
+                else
+                    _snapTween = StartCoroutine(SnapEase(_dragBlockId, fromPos, toPos, 0.09f));
+            }
+            if (DebugInput)
+            {
+                string lp = _session.Board.TryGetBlock(_dragBlockId, out var lb) ? $"({lb.X},{lb.Y})" : "GONE";
+                bool haveTo = _board.TryGetBlockLocalPosition(_dragBlockId, out var vp);
+                Debug.Log($"[MERGEDBG] POST id={_dragBlockId} logical={lp} viewLocal={(haveTo ? vp.ToString("F2") : "n/a")} from={(haveFrom ? fromPos.ToString("F2") : "n/a")} haveFrom={haveFrom}");
             }
 
             if (_session.State == SessionState.Won) OnWon();
@@ -573,6 +619,10 @@ namespace ColorMergeExit.Game
         private int _checkGen;
         private int _lastAppliedGen = -1;
         private volatile int _deadEndResult = -1; // -1 = none; else (gen<<1) | (stuck ? 1 : 0)
+        // A proven dead end no longer fails instantly — the player gets a GRACE window (a warning +
+        // countdown) to undo or use an item to escape. If still stuck when it elapses, the run fails.
+        private const float DeadEndGraceSeconds = 10f;
+        private float _deadEndFailAt = -1f;   // unscaled-time deadline; < 0 = no dead-end pending
 
         private void CheckDeadEnd()
         {
@@ -582,7 +632,15 @@ namespace ColorMergeExit.Game
             System.Threading.Tasks.Task.Run(() =>
             {
                 bool stuck;
-                try { stuck = !Solver.IsSolvable(snap, 200000); }
+                try
+                {
+                    var sw = System.Diagnostics.Stopwatch.StartNew();
+                    // ProvablyStranded (inside IsSolvable) catches the common dead ends instantly; the
+                    // full DFS is only a fallback, so cap it low enough that it can never stall for many
+                    // seconds (its verdict would arrive stale anyway on a big merge/multi-door board).
+                    stuck = !Solver.IsSolvable(snap, 60000, out bool capHit, out int nodes);
+                    if (DebugInput) Debug.Log($"[DEADEND] stuck={stuck} capHit={capHit} nodes={nodes} ms={sw.ElapsedMilliseconds}");
+                }
                 catch { return; } // never let a solver error silently kill detection
                 int packed = (gen << 1) | (stuck ? 1 : 0);
                 int cur;
@@ -605,18 +663,32 @@ namespace ColorMergeExit.Game
             if (gen != _checkGen || _ended || _session.State != SessionState.Playing) return; // stale
             _lastAppliedGen = gen;
             if (stuck)
-                OnDeadEnd();   // board is a PROVEN dead end -> fail immediately, don't wait for the clock
+            {
+                if (_deadEndFailAt < 0f) _deadEndFailAt = Time.time + DeadEndGraceSeconds; // start the grace once
+            }
             else
+            {
+                _deadEndFailAt = -1f;   // escaped the dead end -> cancel the pending failure
                 _hud.HideBanner();
+            }
         }
 
-        // A proven-unsolvable board is an immediate failure: stop the clock and show the fail
-        // dialog right away (tap to retry) instead of leaving the player stuck until time runs out.
+        // While a dead end is pending, show a live countdown; fail only once the grace elapses.
+        private void HandleDeadEndGrace()
+        {
+            if (_deadEndFailAt < 0f || _ended || _session.State != SessionState.Playing) return;
+            float remain = _deadEndFailAt - Time.time;
+            if (remain <= 0f) { OnDeadEnd(); return; }
+            _hud.ShowBanner($"{Localization.Get(LocKeys.DeadEnd)}\n{Mathf.CeilToInt(remain)}", new Color(0.98f, 0.55f, 0.42f));
+        }
+
+        // Called when the dead-end grace window elapses: stop the clock and show the fail dialog.
         private void OnDeadEnd()
         {
             if (_ended) return;
             _ended = true; _won = false;
             HeartStore.Spend();   // a failure costs a life
+            Analytics.LevelFail(_levelId, "deadend", _level.timeLimitSeconds - _session.TimeRemaining, _session.Board.MoveCount);
             _session.Abort();
             _hud.ShowResult(false, HeartStore.HasHeart, 0, Localization.Get(LocKeys.DeadEnd), new Color(0.98f, 0.5f, 0.5f));
             AudioManager.Instance?.Lose();
@@ -634,6 +706,33 @@ namespace ColorMergeExit.Game
                 yield return null;
             }
             _board.SetBlockLocalPosition(id, to);
+            _snapTween = null;
+        }
+
+        // Wrong-colour door feedback: the block lunges a little toward the door, then springs back to
+        // rest — a physical "nope, wrong colour" bump.
+        private IEnumerator BounceEase(int id, Vector3 rest, Vector3 dir, float dur)
+        {
+            Vector3 peak = rest + dir * 0.3f;
+            float outT = dur * 0.32f, backT = dur - outT;
+            float t = 0f;
+            while (t < outT)
+            {
+                t += Time.deltaTime;
+                float k = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(t / outT));
+                _board.SetBlockLocalPosition(id, Vector3.Lerp(rest, peak, k));
+                yield return null;
+            }
+            t = 0f;
+            while (t < backT)
+            {
+                t += Time.deltaTime;
+                float k = Mathf.Clamp01(t / backT);
+                k = 1f - (1f - k) * (1f - k);   // ease-out spring back
+                _board.SetBlockLocalPosition(id, Vector3.Lerp(peak, rest, k));
+                yield return null;
+            }
+            _board.SetBlockLocalPosition(id, rest);
             _snapTween = null;
         }
 
@@ -675,61 +774,14 @@ namespace ColorMergeExit.Game
             _ended = true; _won = true;
             int stars = _session.Stars();
             ProgressStore.RecordClear(_levelId, stars, _session.TimeRemaining);
+            Analytics.LevelComplete(_levelId, _level.timeLimitSeconds - _session.TimeRemaining, stars,
+                _session.Board.MoveCount, _session.TimeRemaining);
             _hud.ShowResult(true, true, stars, Localization.Get(LocKeys.Clear), new Color(0.4f, 0.92f, 0.55f));
             AudioManager.Instance?.Win();
             ParticleBurst.Emit(new Vector3(0f, 0.5f, 0f), new Color(1f, 0.85f, 0.3f), 70, 10f, 0.3f, 1.2f);
-            StartCoroutine(StarCelebration(stars));
-        }
-
-        // Three stars bounce in one-by-one above the board; earned ones flash gold with an
-        // ascending ding + sparkle, missed ones settle dim.
-        private IEnumerator StarCelebration(int stars)
-        {
-            if (_celebration != null) Destroy(_celebration);
-            _celebration = new GameObject("StarCelebration");
-            const float y = 2.1f;
-            var slots = new Transform[3];
-            for (int i = 0; i < 3; i++)
-            {
-                var go = new GameObject($"Star{i}");
-                go.transform.SetParent(_celebration.transform);
-                go.transform.position = new Vector3((i - 1) * 0.95f, y, -0.5f);
-                go.transform.localScale = Vector3.zero;
-                var sr = go.AddComponent<SpriteRenderer>();
-                sr.sprite = VisualAssets.Star();
-                sr.sortingOrder = 130;
-                sr.color = new Color(0.28f, 0.28f, 0.32f, 0.9f);
-                slots[i] = go.transform;
-            }
-            yield return new WaitForSeconds(0.3f);
-            for (int i = 0; i < 3; i++)
-            {
-                var tr = slots[i];
-                if (tr == null) yield break;
-                if (i < stars)
-                {
-                    tr.GetComponent<SpriteRenderer>().color = new Color(1f, 0.82f, 0.22f, 1f);
-                    AudioManager.Instance?.Merge(1.05f + i * 0.18f);
-                    ParticleBurst.Emit(tr.position, new Color(1f, 0.9f, 0.45f), 16, 5f, 0.2f, 0.7f);
-                }
-                yield return StartCoroutine(PopIn(tr, 0.62f));
-                yield return new WaitForSeconds(0.13f);
-            }
-        }
-
-        private static IEnumerator PopIn(Transform tr, float finalScale)
-        {
-            const float dur = 0.3f; float el = 0f;
-            while (el < dur && tr != null)
-            {
-                el += Time.deltaTime;
-                float p = el / dur;
-                float s = p < 0.7f ? Mathf.Lerp(0f, 1.28f, p / 0.7f)
-                                   : Mathf.Lerp(1.28f, 1f, (p - 0.7f) / 0.3f); // overshoot then settle
-                tr.localScale = Vector3.one * (finalScale * s);
-                yield return null;
-            }
-            if (tr != null) tr.localScale = Vector3.one * finalScale;
+            // NOTE: the old above-board StarCelebration was drawn UNDER the result dialog (invisible on
+            // win) yet lived at scene root, so its stars leaked onto the level-select screen. Removed —
+            // the result dialog already shows the earned stars.
         }
 
         private void OnLost()
@@ -737,6 +789,7 @@ namespace ColorMergeExit.Game
             if (_ended) return;
             _ended = true; _won = false;
             HeartStore.Spend();   // a failure costs a life
+            Analytics.LevelFail(_levelId, "timeout", _level.timeLimitSeconds - _session.TimeRemaining, _session.Board.MoveCount);
             // a timer block that detonated shows a distinct message from a plain clock timeout
             string msg = _session.Board.Detonated ? LocKeys.Detonated : LocKeys.TimeUp;
             _hud.ShowResult(false, HeartStore.HasHeart, 0, Localization.Get(msg), new Color(0.98f, 0.5f, 0.5f));

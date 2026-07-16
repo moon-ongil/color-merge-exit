@@ -245,6 +245,24 @@ def try_split_lane(rng, W, H, occ, mergeclear, wallclear, colorat, doors, placed
 
 # Dedicated SPLIT level: only secondary blocks + splitters + primary doors, spread out, NO merge
 # blocks — so the split is the whole puzzle and can't be confused with a merge survivor.
+# The very first tutorial: one lone 1x1 block of a PRIMARY color sitting in front of a matching
+# door. No second block, no merge — the whole lesson is "drag the block out the exit". The board is
+# otherwise empty so the single straight slide can never be blocked.
+def build_solo_level(rng):
+    W = H = 6
+    color = rng.choice([R, B, Y])                     # primary: exits directly, nothing to mix
+    edge = rng.choice([TOP, BOT, LEFT, RIGHT])
+    # centre the exit on its edge (and the lone block at the board centre) so the very first tutorial
+    # reads clean — a middle-of-the-edge door, not one jammed into a corner.
+    if edge in (TOP, BOT):
+        lane = W // 2; x, y = lane, H // 2
+    else:
+        lane = H // 2; x, y = W // 2, lane
+    block = dict(id=1, color=color, x=x, y=y, shape=[(0, 0)], axis=0, locked=False)
+    door = dict(edge=edge, laneStart=lane, length=1, seq=[color])
+    return dict(W=W, H=H, placed=[block], doors=[door], walls=set(), splitters=set())
+
+
 def build_split_level(rng, spec):
     W = H = spec.get('size', 6)
     nsplit = spec['nsplit']; nwalls_t = spec.get('nwalls', 0)
@@ -263,6 +281,44 @@ def build_split_level(rng, spec):
     rng.shuffle(empties)
     walls = set(empties[:min(len(empties), nwalls_t)])
     return dict(W=W, H=H, placed=placed, doors=doors, walls=walls, splitters=splitters)
+
+
+# CYCLING-DOOR level: a single exit whose required colour CYCLES as blocks leave (seq = [c1,c2,..]).
+# The player must deliver the door's CURRENT colour at each step, so the whole puzzle is planning the
+# EXIT ORDER. Each seq colour gets exactly the blocks needed to produce it (primary -> one block;
+# secondary -> a mergeable primary pair), so every block is clearable and the level can be won.
+def build_cycledoor_level(rng, spec):
+    W = H = spec.get('size', 7)
+    k = spec.get('kcolors', 3)          # sequence length
+    nwalls = spec.get('nwalls', 3)
+    allow_secondary = spec.get('secondary', True)
+    edge = rng.choice([TOP, BOT, LEFT, RIGHT])
+    span = H if edge in (LEFT, RIGHT) else W
+    lane = rng.randrange(span)
+
+    pool = [R, B, Y, G, P, O] if allow_secondary else [R, B, Y]
+    seq = [rng.choice(pool) for _ in range(k)]
+
+    placed = []; bid = 1; occ = set()
+    def free_cell():
+        for _ in range(300):
+            c = (rng.randrange(W), rng.randrange(H))
+            if c not in occ:
+                occ.add(c); return c
+        return None
+    for col in seq:
+        producers = [col] if col in (R, B, Y) else list(PAIR[col])   # primary -> self; secondary -> pair
+        for pc in producers:
+            c = free_cell()
+            if c is None:
+                return None
+            placed.append(dict(id=bid, color=pc, x=c[0], y=c[1], shape=[(0, 0)], locked=False, axis=0)); bid += 1
+
+    empties = [(x, y) for x in range(W) for y in range(H) if (x, y) not in occ]
+    rng.shuffle(empties)
+    walls = set(empties[:min(len(empties), nwalls)])
+    door = dict(edge=edge, laneStart=lane, length=1, seq=seq)
+    return dict(W=W, H=H, placed=placed, doors=[door], walls=walls, splitters=set())
 
 
 # One SPLIT-THEN-REMERGE lane (the hard mechanic): a SECONDARY block splits on a splitter into its
@@ -321,6 +377,8 @@ def build_split_remerge_level(rng, spec):
 
 def build(i, rng, spec=None):
     W = H = 6
+    if spec is not None and spec.get('solo'):         # gentlest intro: a single block, no merge —
+        return build_solo_level(rng)                  # just slide it straight out its matching door
     if spec is not None and spec.get('remerge'):      # dedicated split-then-remerge levels
         return build_split_remerge_level(rng, spec)
     if spec is not None and spec.get('split_only'):   # dedicated split levels
@@ -544,8 +602,8 @@ def to_level(i, cand):
 # Tutorial curriculum for 1-15: one new idea at a time, lots of empty board.
 #   1-2 straight merge -> 3+ the TURN (merge then steer to the door) -> locks -> chains
 TUTORIAL = {
-    1:  dict(npairs=1, perp=False, nwalls=0),                       # push together = merge, push out = exit
-    2:  dict(npairs=1, perp=False, nwalls=0),
+    1:  dict(solo=True),                                            # lone block: just push it out its matching exit
+    2:  dict(npairs=1, perp=False, nwalls=0),                       # push together = merge, push out = exit
     3:  dict(npairs=1, perp=True, nwalls=0),                        # merge, then TURN to reach the door
     4:  dict(npairs=2, perp=True, nwalls=0),
     5:  dict(npairs=2, perp=True, nwalls=1),

@@ -61,25 +61,108 @@ namespace ColorMergeExit.Core
 
         public static bool IsSolvable(Board board, int cap = 60000) => IsSolvable(Capture(board), cap);
 
-        public static bool IsSolvable(Snapshot snap, int cap = 60000)
+        public static bool IsSolvable(Snapshot snap, int cap = 60000) => IsSolvable(snap, cap, out _, out _);
+
+        /// <summary><paramref name="capHit"/> = the search gave up at <paramref name="cap"/> without
+        /// proving anything (so it reports solvable to avoid false alarms); <paramref name="nodes"/> =
+        /// states explored. Diagnostics for "dead end not detected" cases.</summary>
+        public static bool IsSolvable(Snapshot snap, int cap, out bool capHit, out int nodes)
         {
+            capHit = false;
+            // Cheap sound pre-check: if some block can NEVER reach any open door's colour (even granting
+            // every possible merge/split/cycle), the position is a proven dead end — no need for the full,
+            // potentially explosive DFS. Over-approximated so it can only ever be RIGHT about a dead end
+            // (never flags a winnable board), and it catches the common "stranded block" case instantly.
+            if (ProvablyStranded(snap)) { nodes = 0; return false; }
+
             var startDoor = new int[snap.Doors.Length];
             for (int i = 0; i < snap.Doors.Length; i++) startDoor[i] = snap.Doors[i].StartIndex;
 
-            var seen = new HashSet<string> { Key(snap.Blocks, startDoor) };
+            // Keep blocks in a canonical (Id-sorted) order for the whole search: Neighbors clones
+            // preserve list order and merges/exits (RemoveAt) keep it sorted, so KeyBytes can encode the
+            // list directly with no per-state sort. This yields the SAME visited set as the old string
+            // Key (identical solvable/dead-end verdict) but far cheaper — no StringBuilder / List clone /
+            // Sort per state — turning a multi-second dead-end proof into a sub-second one.
+            snap.Blocks.Sort((a, z) => a.Id - z.Id);
+
+            var seen = new HashSet<byte[]>(ByteKeyComparer.Instance) { KeyBytes(snap.Blocks, startDoor) };
             var stack = new Stack<(List<B> blocks, int[] didx)>();
             stack.Push((snap.Blocks, startDoor));
 
             while (stack.Count > 0)
             {
                 var (blocks, didx) = stack.Pop();
-                if (blocks.Count == 0) return true;
-                if (seen.Count > cap) return true; // gave up searching -> don't false-alarm
+                if (blocks.Count == 0) { nodes = seen.Count; return true; }
+                if (seen.Count > cap) { capHit = true; nodes = seen.Count; return true; } // gave up -> don't false-alarm
 
                 foreach (var ns in Neighbors(blocks, didx, snap))
-                    if (seen.Add(Key(ns.blocks, ns.didx))) stack.Push((ns.blocks, ns.didx));
+                    if (seen.Add(KeyBytes(ns.blocks, ns.didx))) stack.Push((ns.blocks, ns.didx));
             }
+            nodes = seen.Count;
             return false; // search fully exhausted with no clear -> proven dead end
+        }
+
+        /// <summary>Fast, SOUND dead-end test: true only when some block can never reach any open door's
+        /// colour. Everything is over-approximated (any two colours may merge regardless of shape/geometry;
+        /// splits/chameleon cycles always available), so a "true" is always a genuine dead end, while
+        /// winnable boards are never flagged. Catches the frequent "wrong door spent → block stranded" case
+        /// without the exponential full search.</summary>
+        private static bool ProvablyStranded(Snapshot snap)
+        {
+            if (snap.Blocks.Count == 0) return false;
+
+            // colours any still-open door can still accept (its current colour + every remaining one)
+            var exitColors = new HashSet<CarColor>();
+            foreach (var d in snap.Doors)
+                for (int k = d.StartIndex; k < d.Seq.Length; k++) exitColors.Add(d.Seq[k]);
+            if (exitColors.Count == 0) return true; // no open doors but blocks remain -> dead
+
+            bool hasSplit = snap.Splitters != null && snap.Splitters.Count > 0;
+
+            // every colour that could ever appear (partners available for merges), as a closure
+            var producible = new HashSet<CarColor>();
+            foreach (var b in snap.Blocks)
+            {
+                if (b.Cycle != null) foreach (var c in b.Cycle) producible.Add(c);
+                else producible.Add(b.C);
+            }
+            ExpandColorClosure(producible, producible, hasSplit);
+
+            // each block must be able to become SOME open-door colour
+            foreach (var b in snap.Blocks)
+            {
+                var reach = new HashSet<CarColor>();
+                if (b.Cycle != null) foreach (var c in b.Cycle) reach.Add(c);
+                else reach.Add(b.C);
+                ExpandColorClosure(reach, producible, hasSplit);
+                bool canExit = false;
+                foreach (var c in reach) if (exitColors.Contains(c)) { canExit = true; break; }
+                if (!canExit) return true; // this block can never match an open door -> proven dead
+            }
+            return false;
+        }
+
+        // Grow `set` to a fixpoint: any member merged with any `partner` colour, plus split components
+        // (when splitters exist). Operates on the ≤13-colour space, so it is effectively O(1).
+        private static void ExpandColorClosure(HashSet<CarColor> set, HashSet<CarColor> partners, bool hasSplit)
+        {
+            bool changed = true;
+            while (changed)
+            {
+                changed = false;
+                var current = new List<CarColor>(set);
+                var partnerList = new List<CarColor>(partners); // snapshot: set and partners may be the same object
+                foreach (var x in current)
+                {
+                    foreach (var y in partnerList)
+                        if (ColorMix.TryMix(x, y, out var m) && set.Add(m)) changed = true;
+                    if (hasSplit && ColorMix.TrySplit(x, out var a, out var b))
+                    {
+                        if (set.Add(a)) changed = true;
+                        if (set.Add(b)) changed = true;
+                    }
+                }
+            }
         }
 
         /// <summary>The first move of some solution: which block to move and in what direction.
@@ -411,6 +494,53 @@ namespace ColorMergeExit.Core
             var sb = new StringBuilder();
             foreach (var c in cells) sb.Append(c.Item1).Append(':').Append(c.Item2).Append(',');
             return sb.ToString();
+        }
+
+        // Lossless compact state key for the dead-end search (hot path). Encodes the SAME distinguishing
+        // fields as Key(): per block Id, X, Y, colour (or 255 = wildcard, matching Key's '~'), locked;
+        // then door indices. Assumes blocks are Id-sorted (IsSolvable sorts once at the start and every
+        // successor preserves that order), so the byte layout is canonical — two paths reaching the same
+        // position produce byte-identical keys, exactly like the sorted string Key. Avoids the
+        // per-state StringBuilder + List clone + Sort that made the string key slow.
+        private static byte[] KeyBytes(List<B> blocks, int[] didx)
+        {
+            var buf = new byte[blocks.Count * 14 + didx.Length * 4];
+            int p = 0;
+            foreach (var b in blocks)
+            {
+                WriteInt(buf, ref p, b.Id);
+                WriteInt(buf, ref p, b.X);
+                WriteInt(buf, ref p, b.Y);
+                buf[p++] = b.Cycle != null ? (byte)255 : (byte)b.C; // wildcard colour == 255
+                buf[p++] = b.L ? (byte)1 : (byte)0;
+            }
+            foreach (var d in didx) WriteInt(buf, ref p, d);
+            return buf;
+        }
+
+        private static void WriteInt(byte[] buf, ref int p, int v)
+        {
+            buf[p++] = (byte)v; buf[p++] = (byte)(v >> 8); buf[p++] = (byte)(v >> 16); buf[p++] = (byte)(v >> 24);
+        }
+
+        // Exact byte comparison (lossless dedup) with an FNV-1a hash for bucketing; hash collisions are
+        // resolved by Equals, so distinct states are never conflated.
+        private sealed class ByteKeyComparer : IEqualityComparer<byte[]>
+        {
+            public static readonly ByteKeyComparer Instance = new ByteKeyComparer();
+            public bool Equals(byte[] a, byte[] b)
+            {
+                if (ReferenceEquals(a, b)) return true;
+                if (a == null || b == null || a.Length != b.Length) return false;
+                for (int i = 0; i < a.Length; i++) if (a[i] != b[i]) return false;
+                return true;
+            }
+            public int GetHashCode(byte[] a)
+            {
+                uint h = 2166136261u;
+                for (int i = 0; i < a.Length; i++) { h ^= a[i]; h *= 16777619u; }
+                return unchecked((int)h);
+            }
         }
 
         private static string Key(List<B> blocks, int[] didx)

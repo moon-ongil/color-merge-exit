@@ -206,6 +206,101 @@ namespace ColorMergeExit.Tests
             Assert.IsTrue(Solver.IsSolvable(shaped), "red bar slides into blue bar -> purple bar exits");
         }
 
+        // Full re-verification that the byte-key solver still judges every shipped level solvable.
+        // [Explicit] so the normal suite stays fast + path-independent; run on demand:
+        //   dotnet test --filter Solver_AllShippedLevels_RemainSolvable
+        // Locates StreamingAssets via the LEVELS_DIR env var, else a repo-relative fallback.
+        // dotnet-only: System.Text.Json isn't in Unity, so this compiles only in the CoreTests project.
+#if !UNITY_5_3_OR_NEWER
+        [Test, Explicit]
+        public void Solver_AllShippedLevels_RemainSolvable()
+        {
+            string dir = System.Environment.GetEnvironmentVariable("LEVELS_DIR");
+            if (string.IsNullOrEmpty(dir))
+                dir = System.IO.Path.GetFullPath(System.IO.Path.Combine(
+                    TestContext.CurrentContext.TestDirectory, "../../../../Assets/StreamingAssets/Levels"));
+            if (!System.IO.Directory.Exists(dir))
+                Assert.Ignore($"levels dir not found: {dir}");
+
+            var opts = new System.Text.Json.JsonSerializerOptions { IncludeFields = true };
+            var files = System.IO.Directory.GetFiles(dir, "level_*.json");
+            System.Array.Sort(files);
+            var unsolvable = new List<string>();
+            long worstMs = 0; string worst = "";
+            var sw = System.Diagnostics.Stopwatch.StartNew();
+            foreach (var f in files)
+            {
+                var data = System.Text.Json.JsonSerializer.Deserialize<LevelData>(
+                    System.IO.File.ReadAllText(f), opts);
+                var board = data.BuildBoard();
+                var t = System.Diagnostics.Stopwatch.StartNew();
+                bool ok = Solver.IsSolvable(board, 400000);
+                t.Stop();
+                if (t.ElapsedMilliseconds > worstMs) { worstMs = t.ElapsedMilliseconds; worst = System.IO.Path.GetFileName(f); }
+                if (!ok) unsolvable.Add(System.IO.Path.GetFileName(f));
+            }
+            sw.Stop();
+            TestContext.Out.WriteLine($"[VERIFY] levels={files.Length} unsolvable={unsolvable.Count} " +
+                $"totalMs={sw.ElapsedMilliseconds} worst={worst}@{worstMs}ms");
+            if (unsolvable.Count > 0)
+                TestContext.Out.WriteLine("[VERIFY] UNSOLVABLE: " + string.Join(", ", unsolvable));
+            Assert.IsEmpty(unsolvable, "every shipped level must remain solvable under the byte-key solver");
+        }
+#endif
+
+        // Regression guard for the dead-end detection latency: a position with several free blocks
+        // that can never merge (all one colour) or exit (no matching door) forces the solver to
+        // exhaust a large state space to PROVE the dead end. This mirrors the in-game case that used
+        // to take tens of seconds; the byte-key solver must exhaust it in well under a second.
+        [Test]
+        public void Solver_ProvesLargeDeadEnd_Fast()
+        {
+            // 3 blue blocks + a lone red door: blue can't mix with blue and can't exit a red door,
+            // so it's unsolvable, but the blocks slide freely -> a large reachable state space.
+            var board = new Board(6, 6,
+                new[] { Block.Rect(1, B, 0, 0), Block.Rect(2, B, 2, 2), Block.Rect(3, B, 4, 4) },
+                new[] { Door(Edge.Right, 2, 1, R) });
+
+            var snap = Solver.Capture(board);
+            var sw = System.Diagnostics.Stopwatch.StartNew();
+            bool solvable = Solver.IsSolvable(snap, 200000, out bool capHit, out int nodes);
+            sw.Stop();
+
+            TestContext.Out.WriteLine($"[BENCH] deadend nodes={nodes} capHit={capHit} ms={sw.ElapsedMilliseconds}");
+            Assert.IsFalse(solvable, "3 blue blocks with only a red door is a proven dead end");
+            Assert.IsFalse(capHit, "must be a PROVEN dead end, not a give-up at the cap");
+            // The sound ProvablyStranded pre-check catches this instantly (blue can never become red),
+            // so it resolves in ~0 nodes; even the DFS fallback stays well under the budget.
+            Assert.Less(sw.ElapsedMilliseconds, 3000, "dead-end proof must be fast");
+        }
+
+        // Repro for "stuck but no NO WAY OUT": single-colour doors close after one use. If the player
+        // spends the Yellow + Purple doors on the wrong blocks, the leftover Yellow/Purple blocks can't
+        // exit the only doors left (Green needs B+Y, Orange needs R+Y). The solver MUST see the used-up
+        // doors as closed and report this as a dead end.
+        [Test]
+        public void Solver_UsedUpDoors_DeadEndDetected()
+        {
+            var O = CarColor.Orange;
+            var blocks = new[]
+            {
+                Block.Rect(1, Y, 4, 1),   // leftover yellow
+                Block.Rect(2, Y, 4, 3),   // leftover yellow
+                Block.Rect(3, P, 4, 5),   // leftover purple
+            };
+            Exit Done(Edge e, int lane, CarColor c) { var d = new Exit(e, lane, 1, c); d.SetIndex(1); return d; }
+            var doors = new[]
+            {
+                Door(Edge.Right, 1, 1, G),          // green — open, but needs B+Y
+                Door(Edge.Right, 3, 1, O),          // orange — open, but needs R+Y
+                Done(Edge.Right, 5, Y),             // yellow door already spent
+                Done(Edge.Right, 0, P),             // purple door already spent
+            };
+            var board = new Board(6, 6, blocks, doors);
+            Assert.IsFalse(Solver.IsSolvable(board),
+                "2 yellow + 1 purple with only green/orange doors left is a proven dead end");
+        }
+
         [Test]
         public void SameColorBlocks_DoNotMerge_JustBlock()
         {

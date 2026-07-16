@@ -32,6 +32,9 @@ namespace ColorMergeExit.Game
         private static readonly Dictionary<string, Sprite> _shapeCache = new Dictionary<string, Sprite>();
 
         private static Sprite _grad;
+        private static Sprite _blob;
+        private static Sprite _rainbow;
+        private static Sprite _cloud;
 
         // ---- UI sprite sheet (Resources/ui_sheet.png): a 2048x2048 POT grid of glossy buttons/icons ----
         private const int UiCols = 8, UiRows = 8;
@@ -68,6 +71,29 @@ namespace ColorMergeExit.Game
 
         /// <summary>A soft top-to-bottom pastel gradient (sky blue -> lavender) used as a bright,
         /// pretty full-screen background. 1 unit tall at the sprite's native size; scale to cover.</summary>
+        private static Sprite _bandFade;
+
+        /// <summary>A vertical fade: opaque white at the TOP edge → fully transparent at the bottom.
+        /// Tint it the header-band colour and place it just under the band so the band's hard bottom
+        /// edge melts into the scrolling content instead of showing a sharp seam.</summary>
+        public static Sprite BandFade()
+        {
+            if (_bandFade != null) return _bandFade;
+            const int N = 64;
+            var tex = new Texture2D(N, N, TextureFormat.RGBA32, false) { filterMode = FilterMode.Bilinear, wrapMode = TextureWrapMode.Clamp };
+            for (int y = 0; y < N; y++)
+            {
+                // texture y=0 is the bottom → alpha 0 there, alpha 1 at the top (y=N-1). Smoothstep for
+                // a natural, non-linear falloff.
+                float t = (float)y / (N - 1);
+                float a = t * t * (3f - 2f * t);
+                for (int x = 0; x < N; x++) tex.SetPixel(x, y, new Color(1f, 1f, 1f, a));
+            }
+            tex.Apply();
+            _bandFade = Sprite.Create(tex, new Rect(0, 0, N, N), new Vector2(0.5f, 1f), N); // pivot at TOP
+            return _bandFade;
+        }
+
         public static Sprite SoftGradient()
         {
             if (_grad != null) return _grad;
@@ -84,6 +110,97 @@ namespace ColorMergeExit.Game
             tex.Apply();
             _grad = Sprite.Create(tex, new Rect(0, 0, N, N), new Vector2(0.5f, 0.5f), N);
             return _grad;
+        }
+
+        /// <summary>A big, very soft radial blob (opaque centre fading smoothly to fully transparent
+        /// at the rim) for dreamy pastel "bokeh" in the background. Tint + scale it per use.</summary>
+        public static Sprite SoftBlob()
+        {
+            if (_blob != null) return _blob;
+            const int N = 128; const float c = (N - 1) * 0.5f, rad = (N - 1) * 0.5f;
+            var tex = new Texture2D(N, N, TextureFormat.RGBA32, false) { filterMode = FilterMode.Bilinear, wrapMode = TextureWrapMode.Clamp };
+            for (int y = 0; y < N; y++)
+            for (int x = 0; x < N; x++)
+            {
+                float dx = x - c, dy = y - c;
+                float t = Mathf.Clamp01(Mathf.Sqrt(dx * dx + dy * dy) / rad);   // 0 centre -> 1 rim
+                float a = 1f - t; a = a * a * (3f - 2f * a);                     // smoothstep feather
+                tex.SetPixel(x, y, new Color(1f, 1f, 1f, a));
+            }
+            tex.Apply();
+            _blob = Sprite.Create(tex, new Rect(0, 0, N, N), new Vector2(0.5f, 0.5f), N);
+            return _blob;
+        }
+
+        /// <summary>A soft half-circle RAINBOW (seven bands, red outermost), transparent outside the
+        /// arc and below the horizon. Pivot is bottom-centre so it rises from the screen bottom. Fits
+        /// the "bring colour back to the world" theme as a fixed splash of colour behind the path.</summary>
+        public static Sprite SoftRainbow()
+        {
+            if (_rainbow != null) return _rainbow;
+            const int N = 1024; const float cx = (N - 1) * 0.5f;   // high-res so the big arc stays smooth
+            float rOut = N * 0.49f, rIn = N * 0.30f;
+            float feather = N * 0.018f;                            // rim fade, scaled to resolution
+            // inner -> outer: violet, indigo, blue, green, yellow, orange, red
+            var bands = new[]
+            {
+                new Color(0.66f, 0.45f, 0.89f), new Color(0.42f, 0.44f, 0.86f),
+                new Color(0.35f, 0.66f, 0.98f), new Color(0.46f, 0.82f, 0.47f),
+                new Color(1.00f, 0.87f, 0.32f), new Color(1.00f, 0.62f, 0.26f),
+                new Color(0.98f, 0.34f, 0.34f),
+            };
+            var tex = new Texture2D(N, N, TextureFormat.RGBA32, false) { filterMode = FilterMode.Bilinear, wrapMode = TextureWrapMode.Clamp };
+            for (int y = 0; y < N; y++)
+            for (int x = 0; x < N; x++)
+            {
+                float dx = x - cx, dy = y;                 // centre at bottom (y = 0)
+                float d = Mathf.Sqrt(dx * dx + dy * dy);
+                if (d < rIn || d > rOut) { tex.SetPixel(x, y, new Color(0, 0, 0, 0)); continue; }
+                // smoothly interpolate ACROSS the seven anchor colours (like a real rainbow) so the
+                // band-to-band seams blend instead of meeting at a hard line.
+                float f = Mathf.Clamp01((d - rIn) / (rOut - rIn)) * 6f;
+                int i0 = Mathf.Clamp((int)f, 0, 6), i1 = Mathf.Min(i0 + 1, 6);
+                var c = Color.Lerp(bands[i0], bands[i1], f - i0);
+                float edge = Mathf.Min(d - rIn, rOut - d);           // fade the inner & outer rims
+                float a = Mathf.Clamp01(edge / feather) * 0.7f;
+                tex.SetPixel(x, y, new Color(c.r, c.g, c.b, a));
+            }
+            tex.Apply();
+            _rainbow = Sprite.Create(tex, new Rect(0, 0, N, N), new Vector2(0.5f, 0f), N);
+            return _rainbow;
+        }
+
+        /// <summary>A soft, puffy white cloud (union of a few discs, flat-ish bottom) for the sky.
+        /// Tint/alpha it per use; the sprite is wider than tall so scale it uniformly.</summary>
+        public static Sprite SoftCloud()
+        {
+            if (_cloud != null) return _cloud;
+            const int N = 256;
+            // discs in normalised [0,1] space: (cx, cy, r) — a lumpy top, flat bottom around y=0.40
+            var discs = new[]
+            {
+                new Vector3(0.50f, 0.46f, 0.20f), new Vector3(0.32f, 0.44f, 0.15f),
+                new Vector3(0.68f, 0.44f, 0.16f), new Vector3(0.42f, 0.56f, 0.15f),
+                new Vector3(0.60f, 0.55f, 0.14f), new Vector3(0.22f, 0.43f, 0.11f),
+                new Vector3(0.78f, 0.43f, 0.12f),
+            };
+            var tex = new Texture2D(N, N, TextureFormat.RGBA32, false) { filterMode = FilterMode.Bilinear, wrapMode = TextureWrapMode.Clamp };
+            for (int y = 0; y < N; y++)
+            for (int x = 0; x < N; x++)
+            {
+                float nx = (float)x / N, ny = (float)y / N;
+                float a = 0f;
+                foreach (var dsc in discs)
+                {
+                    float dd = Mathf.Sqrt((nx - dsc.x) * (nx - dsc.x) + (ny - dsc.y) * (ny - dsc.y));
+                    a = Mathf.Max(a, Mathf.Clamp01((dsc.z - dd) / 0.05f));   // soft-edged union
+                }
+                if (ny < 0.40f) a *= Mathf.Clamp01((ny - 0.30f) / 0.10f);    // flatten the underside
+                tex.SetPixel(x, y, new Color(1f, 1f, 1f, a));
+            }
+            tex.Apply();
+            _cloud = Sprite.Create(tex, new Rect(0, 0, N, N), new Vector2(0.5f, 0.5f), N);
+            return _cloud;
         }
 
         /// <summary>A 1x1 white sprite (pixelsPerUnit = 1 so one unit == one cell).</summary>
@@ -565,7 +682,7 @@ namespace ColorMergeExit.Game
         {
             if (_glossyBar != null) return _glossyBar;
             const int N = 128;
-            const float r = 9f;                       // small radius -> squarer door bar
+            const float r = 28f;                      // generous radius -> softly-rounded door bar
             var tex = new Texture2D(N, N, TextureFormat.RGBA32, false) { filterMode = FilterMode.Bilinear, wrapMode = TextureWrapMode.Clamp };
             for (int y = 0; y < N; y++)
             for (int x = 0; x < N; x++)
@@ -802,22 +919,23 @@ namespace ColorMergeExit.Game
         {
             switch (c)
             {
-                // Vivid, high-saturation palette with the easily-confused pairs pushed apart:
-                // Purple stays clearly blue-violet vs. the hot magenta Pink; Green (emerald) vs.
-                // the yellow-green Lime; Blue (azure) vs. the green-leaning Teal.
-                case CarColor.Red: return new Color(0.96f, 0.22f, 0.24f);
+                // Vivid palette with the easily-confused colours pushed apart. The warm R+Y family
+                // (Red / Coral / Orange / Amber / Yellow) used to blur into one orange gradient, so the
+                // two warm tertiaries are re-hued by lightness + hue: Coral = light salmon-pink,
+                // Amber = deep gold/mustard — each clearly distinct from pure Orange, Red and Yellow.
+                case CarColor.Red: return new Color(0.93f, 0.18f, 0.20f);
                 case CarColor.Blue: return new Color(0.13f, 0.52f, 1.00f);
-                case CarColor.Yellow: return new Color(1.00f, 0.83f, 0.09f);
+                case CarColor.Yellow: return new Color(1.00f, 0.84f, 0.10f);
                 case CarColor.Green: return new Color(0.16f, 0.80f, 0.36f);
-                case CarColor.Purple: return new Color(0.60f, 0.28f, 0.92f);
-                case CarColor.Orange: return new Color(1.00f, 0.53f, 0.10f);
-                case CarColor.Pink: return new Color(1.00f, 0.40f, 0.72f);
+                case CarColor.Purple: return new Color(0.62f, 0.28f, 0.93f);
+                case CarColor.Orange: return new Color(1.00f, 0.50f, 0.00f);  // pure vivid orange
+                case CarColor.Pink: return new Color(1.00f, 0.38f, 0.74f);    // hot magenta pink
                 case CarColor.Teal: return new Color(0.05f, 0.78f, 0.74f);
-                case CarColor.Lime: return new Color(0.66f, 0.90f, 0.12f);
-                case CarColor.Brown: return new Color(0.56f, 0.37f, 0.22f);
-                case CarColor.Coral: return new Color(1.00f, 0.44f, 0.42f);   // warm red-orange
-                case CarColor.Indigo: return new Color(0.36f, 0.32f, 0.90f);  // deep blue-violet
-                case CarColor.Amber: return new Color(1.00f, 0.70f, 0.13f);   // golden
+                case CarColor.Lime: return new Color(0.68f, 0.90f, 0.10f);
+                case CarColor.Brown: return new Color(0.52f, 0.35f, 0.20f);
+                case CarColor.Coral: return new Color(1.00f, 0.56f, 0.56f);   // light salmon-pink
+                case CarColor.Indigo: return new Color(0.34f, 0.30f, 0.92f);  // deep blue-violet
+                case CarColor.Amber: return new Color(0.92f, 0.68f, 0.16f);   // deep gold / mustard
                 default: return Color.gray;
             }
         }

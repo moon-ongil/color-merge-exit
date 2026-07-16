@@ -183,7 +183,7 @@
         3,
         0
       ],
-      "cyclePeriod": 2
+      "cycleSeconds": 4.0
     },
     {
       "id": 12,
@@ -220,7 +220,7 @@
         3,
         0
       ],
-      "cyclePeriod": 2
+      "cycleSeconds": 4.0
     },
     {
       "id": 14,
@@ -253,7 +253,7 @@
       ],
       "axis": 0,
       "locked": false,
-      "fuse": 5
+      "timerSeconds": 10.0
     }
   ],
   "doors": [

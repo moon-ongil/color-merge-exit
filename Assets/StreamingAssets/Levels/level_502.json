@@ -1,50 +1,13 @@
 {
   "id": 502,
-  "name": "Stage 502",
+  "name": "Cycle Door 1",
   "width": 6,
   "height": 6,
   "blocks": [
     {
       "id": 1,
       "color": 0,
-      "x": 1,
-      "y": 1,
-      "w": 1,
-      "h": 1,
-      "cells": [
-        {
-          "x": 0,
-          "y": 0
-        }
-      ],
-      "axis": 0,
-      "locked": false,
-      "cycle": [
-        0,
-        3
-      ],
-      "cycleSeconds": 5.0
-    },
-    {
-      "id": 2,
-      "color": 2,
-      "x": 2,
-      "y": 1,
-      "w": 1,
-      "h": 1,
-      "cells": [
-        {
-          "x": 0,
-          "y": 0
-        }
-      ],
-      "axis": 0,
-      "locked": false
-    },
-    {
-      "id": 3,
-      "color": 2,
-      "x": 2,
+      "x": 3,
       "y": 5,
       "w": 1,
       "h": 1,
@@ -55,30 +18,13 @@
         }
       ],
       "axis": 0,
-      "locked": false,
-      "timerSeconds": 12.0
-    },
-    {
-      "id": 4,
-      "color": 0,
-      "x": 1,
-      "y": 4,
-      "w": 1,
-      "h": 1,
-      "cells": [
-        {
-          "x": 0,
-          "y": 0
-        }
-      ],
-      "axis": 0,
       "locked": false
     },
     {
-      "id": 5,
-      "color": 2,
-      "x": 2,
-      "y": 4,
+      "id": 2,
+      "color": 1,
+      "x": 5,
+      "y": 5,
       "w": 1,
       "h": 1,
       "cells": [
@@ -93,38 +39,26 @@
   ],
   "doors": [
     {
-      "edge": 3,
-      "laneStart": 1,
+      "edge": 2,
+      "laneStart": 2,
       "length": 1,
-      "color": 5,
+      "color": 0,
       "colorSequence": [
-        5
-      ]
-    },
-    {
-      "edge": 3,
-      "laneStart": 5,
-      "length": 1,
-      "color": 2,
-      "colorSequence": [
-        2
-      ]
-    },
-    {
-      "edge": 3,
-      "laneStart": 4,
-      "length": 1,
-      "color": 5,
-      "colorSequence": [
-        5
+        0,
+        1
       ]
     }
   ],
-  "walls": [],
+  "walls": [
+    {
+      "x": 1,
+      "y": 3
+    }
+  ],
   "splitters": [],
   "paint": [],
   "memorize": false,
-  "timeLimitSeconds": 75.0,
-  "star2SecondsLeft": 22.5,
-  "star3SecondsLeft": 41.2
+  "timeLimitSeconds": 58.0,
+  "star2SecondsLeft": 17.4,
+  "star3SecondsLeft": 31.2
 }

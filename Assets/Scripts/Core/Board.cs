@@ -175,6 +175,40 @@ namespace ColorMergeExit.Core
             return false;
         }
 
+        /// <summary>True if, sliding as far as it can in (dx,dy), the block ends up pressed against a
+        /// door that covers its lane but that it CANNOT exit (wrong colour / doesn't fit) — the cue for a
+        /// "wrong door" bounce. False for open edges, walls, other blocks, or a door it can actually use.</summary>
+        public bool BlockedDoorAhead(int blockId, int dx, int dy)
+        {
+            if (!_blocks.TryGetValue(blockId, out var b)) return false;
+            if (b.Locked || !b.CanMove(dx, dy)) return false;
+            var probe = b.Clone();
+            while (true)
+            {
+                InspectLeading(probe, dx, dy, out bool offBoard, out bool wallHit, out _, out int distinct);
+                if (wallHit || distinct > 0) return false;    // stopped by a wall / another block
+                if (offBoard)
+                {
+                    if (CanExit(probe, dx, dy)) return false; // a usable door → not a "wrong" door
+                    var edge = EdgeFor(dx, dy);
+                    bool horiz = dx != 0;
+                    foreach (var lead in LeadingCells(probe, dx, dy))
+                        if (!InBounds(lead) && AnyDoorCovers(edge, horiz ? lead.Y : lead.X)) return true;
+                    return false;                             // open edge with no door
+                }
+                probe.X += dx; probe.Y += dy;
+                ApplyPaint(probe);
+                if (CanSplit(probe, dx, dy, out _, out _)) return false; // splitter halts before the edge
+            }
+        }
+
+        private bool AnyDoorCovers(Edge edge, int lane)
+        {
+            foreach (var d in _doors)
+                if (d.Edge == edge && !d.Done && d.Covers(lane)) return true;
+            return false;
+        }
+
         /// <summary>Move a block by up to |steps| along one axis. It slides until blocked
         /// or, at the edge, exits through a matching door (whole-block fit).</summary>
         public MoveResult TryMove(int blockId, int stepX, int stepY)

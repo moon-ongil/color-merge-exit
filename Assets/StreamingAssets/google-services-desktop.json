@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "481285739907",
+    "project_id": "color-merge-exit",
+    "storage_bucket": "color-merge-exit.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:481285739907:android:391546acd6fff1341e92b6",
+        "android_client_info": {
+          "package_name": "me.ongil.colormergeexit"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDWsZ2slB4S-VtJ6zRcWenPP7HmuVlad4U"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

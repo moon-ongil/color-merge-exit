@@ -16,6 +16,8 @@ namespace ColorMergeExit.Editor
         public static void CaptureMain()
         {
             int W = 1080, H = 1920;
+            if (int.TryParse(System.Environment.GetEnvironmentVariable("COLOREXIT_W"), out int wEnv) && wEnv > 0) W = wEnv;
+            if (int.TryParse(System.Environment.GetEnvironmentVariable("COLOREXIT_H"), out int hEnv) && hEnv > 0) H = hEnv;
             string path = System.Environment.GetEnvironmentVariable("COLOREXIT_SHOT");
             if (string.IsNullOrEmpty(path)) path = "shot.png";
 
@@ -38,7 +40,7 @@ namespace ColorMergeExit.Editor
                 var cam = camGo.AddComponent<Camera>();
                 cam.orthographic = true;
                 cam.clearFlags = CameraClearFlags.SolidColor;
-                cam.backgroundColor = new Color(0.06f, 0.07f, 0.09f);
+                cam.backgroundColor = new Color(0.90f, 0.84f, 0.98f); // gradient bottom (matches GameController)
                 cam.transform.position = new Vector3(0f, 0f, -10f);
 
                 var boardGo = new GameObject("Board");
@@ -59,12 +61,32 @@ namespace ColorMergeExit.Editor
                     ps.Simulate(0.3f, true, true);
                 }
 
-                // frame camera (mirrors GameController.FrameCamera)
+                // frame camera (mirrors GameController.FrameCamera, incl. the tablet phone-width cap)
                 float aspect = (float)W / H;
+                float frameAspect = Mathf.Min(aspect, 0.462f);
                 float sizeH = session.Board.Height * 0.5f + 1.9f;
-                float sizeW = (session.Board.Width * 0.5f + 1.0f) / aspect;
+                float sizeW = (session.Board.Width * 0.5f + 1.0f) / frameAspect;
                 cam.orthographicSize = Mathf.Max(sizeH, sizeW);
                 cam.aspect = aspect;
+
+                // Light gradient backdrop (mirrors GameController.Configure) so the shot looks like the
+                // real game and fills the side margins on wide (tablet) framings — sits behind everything.
+                var bgGo = new GameObject("PageBg");
+                bgGo.transform.SetParent(root.transform);
+                bgGo.transform.position = new Vector3(0f, 0f, 1f);
+                var bgsr = bgGo.AddComponent<SpriteRenderer>();
+                bgsr.sprite = VisualAssets.SoftGradient();
+                bgsr.sortingOrder = -100;
+                float visH = cam.orthographicSize * 2f, visW = visH * aspect;
+                bgGo.transform.localScale = new Vector3(Mathf.Max(24f, visW * 1.06f), Mathf.Max(22f, visH * 1.06f), 1f);
+
+                // Seed the item inventory so the ITEMS row shows unlocked charges (x2), like a real
+                // save. COLOREXIT_LOCKSPLIT=1 keeps the split item locked (matches early levels, before
+                // the split tutorial unlocks it).
+                bool lockSplit = System.Environment.GetEnvironmentVariable("COLOREXIT_LOCKSPLIT") == "1";
+                SeedItem(ItemType.Hint, true);
+                SeedItem(ItemType.AddTime, true);
+                SeedItem(ItemType.ForceSplit, !lockSplit);
 
                 var hudGo = new GameObject("HUD");
                 hudGo.transform.SetParent(root.transform);
@@ -129,12 +151,18 @@ namespace ColorMergeExit.Editor
         public static void CaptureSelect()
         {
             int W = 1080, H = 1920;
+            if (int.TryParse(System.Environment.GetEnvironmentVariable("COLOREXIT_W"), out int wEnv) && wEnv > 0) W = wEnv;
+            if (int.TryParse(System.Environment.GetEnvironmentVariable("COLOREXIT_H"), out int hEnv) && hEnv > 0) H = hEnv;
             string path = System.Environment.GetEnvironmentVariable("COLOREXIT_SHOT");
             if (string.IsNullOrEmpty(path)) path = "shot.png";
             var sprites = Resources.Load<GameSprites>("GameSprites");
 
-            PlayerPrefs.SetInt("unlocked", 12);
-            for (int i = 1; i <= 11; i++)
+            // Focus level (COLOREXIT_SELECT_LEVEL) becomes the "current" node, with the run of levels
+            // below it completed (varied stars) so the map reads like a real save near that progress.
+            int target = 12;
+            if (int.TryParse(System.Environment.GetEnvironmentVariable("COLOREXIT_SELECT_LEVEL"), out int tl) && tl > 0) target = tl;
+            PlayerPrefs.SetInt("unlocked", target);
+            for (int i = Mathf.Max(1, target - 18); i < target; i++)
             {
                 PlayerPrefs.SetInt($"lvl.{i}.stars", (i % 3) + 1);
                 PlayerPrefs.SetFloat($"lvl.{i}.best", 12f + (i * 7 % 44));
@@ -165,6 +193,17 @@ namespace ColorMergeExit.Editor
                 Object.DestroyImmediate(root);
                 ProgressStore.ResetAll(); // don't leave simulated progress behind
             }
+        }
+
+        // Editor-only: force an item's persisted unlock state + full charge so the HUD renders it the
+        // way a mid-game save would (unlocked → glossy glyph + "x2"; locked → padlock badge).
+        private static void SeedItem(ItemType t, bool unlocked)
+        {
+            int ti = (int)t;
+            PlayerPrefs.SetInt($"item.{ti}.init", 1);
+            PlayerPrefs.SetInt($"item.{ti}.count", ItemStore.StartCount);
+            PlayerPrefs.SetInt($"item.{ti}.unlocked", unlocked ? 1 : 0);
+            PlayerPrefs.Save();
         }
 
         private static void RenderToPng(Camera cam, int W, int H, string path)

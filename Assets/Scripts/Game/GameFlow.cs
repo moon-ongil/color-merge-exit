@@ -101,7 +101,7 @@ namespace ColorMergeExit.Game
         private Camera CreateCamera()
         {
             var existing = Camera.main;
-            if (existing != null) return existing;
+            if (existing != null) { EnsureAudioListener(existing.gameObject); return existing; }
 
             var go = new GameObject("Main Camera");
             go.tag = "MainCamera";
@@ -112,7 +112,16 @@ namespace ColorMergeExit.Game
             cam.transform.position = new Vector3(0f, 0f, -10f);
             cam.nearClipPlane = 0.1f;
             cam.farClipPlane = 100f;
+            // Unity outputs NO audio at all if the scene has no AudioListener. The game builds its
+            // scene entirely in code (no listener in Main.unity), so without this the app is silent
+            // on device AND simulator — regardless of the AudioSession/mute-switch fix.
+            EnsureAudioListener(go);
             return cam;
+        }
+
+        private static void EnsureAudioListener(GameObject go)
+        {
+            if (go.GetComponent<AudioListener>() == null) go.AddComponent<AudioListener>();
         }
     }
 }

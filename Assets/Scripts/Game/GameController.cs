@@ -23,6 +23,7 @@ namespace ColorMergeExit.Game
         private int _levelId;
         private System.Action _onHome, _onNext;
         private bool _ended, _won;
+        private Transform _pageBg;   // world-space gradient backdrop (grows to fill wide screens)
 
         // drag state
         private bool _dragging;
@@ -52,10 +53,52 @@ namespace ColorMergeExit.Game
             var bg = new GameObject("PageBg");
             bg.transform.SetParent(transform, false);
             bg.transform.position = new Vector3(0f, 0f, 1f);
-            bg.transform.localScale = new Vector3(24f, 22f, 1f);
+            bg.transform.localScale = new Vector3(24f, 22f, 1f);   // resized to cover the viewport in FrameCamera
             var bgsr = bg.AddComponent<SpriteRenderer>();
             bgsr.sprite = VisualAssets.SoftGradient();
             bgsr.sortingOrder = -100;
+            _pageBg = bg.transform;
+
+            // Re-run the HUD layout once the banner's real height is known, so the ITEMS row settles
+            // exactly above it (before load we reserve an estimate, so there's no overlap in the gap).
+            AdManager.OnBannerChanged += HandleBannerChanged;
+        }
+
+        private void OnDestroy() => AdManager.OnBannerChanged -= HandleBannerChanged;
+
+        // GMA ad callbacks may arrive on a background thread, so the handler only flags the work; the
+        // actual HUD rebuild (Unity API — main thread only) runs in Update below.
+        private volatile bool _bannerLayoutDirty;
+        private void HandleBannerChanged() => _bannerLayoutDirty = true;
+
+        private void RelayoutForBanner()
+        {
+            // Only re-lay the plain playing HUD — never yank the layout out from under an open overlay.
+            if (_session == null || _ended || _cam == null || _hud == null) return;
+            if (_hud.ResultOpen || _hud.ConfirmOpen || _hud.SettingsOpen || _hud.InfoOpen || TutorialBlocking) return;
+            _hud.Build(_board.Width, _board.Height, _sprites, _levelId, _cam.orthographicSize,
+                _level.timeLimitSeconds, BannerWorldHeight());
+            _hud.SetTime(_session.TimeRemaining);
+        }
+
+        /// <summary>Screen-bottom banner height converted to world units for the current camera. Uses the
+        /// real loaded height when known, otherwise a device-class estimate so the ITEMS row never
+        /// overlaps the banner even in the brief window before it loads.</summary>
+        private float BannerWorldHeight()
+        {
+            if (_cam == null || Screen.height <= 0) return 0f;
+            float px = AdManager.BannerHeightPixels;
+            if (px <= 0f) px = EstimatedBannerPixels();
+            return px / Screen.height * (2f * _cam.orthographicSize);
+        }
+
+        // Adaptive anchored banner: ~50dp on phones, ~90dp on tablets (min screen dimension ≥ 600dp).
+        private static float EstimatedBannerPixels()
+        {
+            float dpi = Screen.dpi <= 0f ? 160f : Screen.dpi;
+            float minDpDim = Mathf.Min(Screen.width, Screen.height) / dpi * 160f;
+            float heightDp = minDpDim >= 600f ? 90f : 50f;
+            return heightDp * dpi / 160f;
         }
 
         private int _attempt;   // 1 on first play, +1 per retry of the same level (analytics)
@@ -75,7 +118,8 @@ namespace ColorMergeExit.Game
             Analytics.LevelStart(_levelId, _attempt);
             _board.Build(_session.Board, _sprites);
             FrameCamera();
-            _hud.Build(_board.Width, _board.Height, _sprites, _levelId, _cam.orthographicSize, _level.timeLimitSeconds);
+            _hud.Build(_board.Width, _board.Height, _sprites, _levelId, _cam.orthographicSize,
+                _level.timeLimitSeconds, BannerWorldHeight());
             _hud.SetTime(_session.TimeRemaining);
             _hud.HideBanner();
 
@@ -193,15 +237,34 @@ namespace ColorMergeExit.Game
         {
             _cam.orthographic = true;
             float aspect = _cam.aspect <= 0f ? 0.5625f : _cam.aspect;
+            // On screens WIDER than a phone (tablets), keep the play cluster (board + HUD + items)
+            // framed at phone proportions instead of zooming in to fill the extra width — otherwise
+            // the board/blocks balloon on an iPad. Cap the width-fit aspect at a modern tall-phone
+            // ratio (~0.462 ≈ 19.5:9); on an iPad this renders the board at essentially iPhone pixel
+            // width, centred, with the background gradient filling the side margins. Anything narrower
+            // (all current iPhones) is unaffected.
+            const float MaxFrameAspect = 0.462f;
+            float frameAspect = Mathf.Min(aspect, MaxFrameAspect);
             float sizeForHeight = _board.Height * 0.5f + 1.9f;
-            float sizeForWidth = (_board.Width * 0.5f + 1.0f) / aspect;
+            float sizeForWidth = (_board.Width * 0.5f + 1.0f) / frameAspect;
             _cam.orthographicSize = Mathf.Max(sizeForHeight, sizeForWidth);
             _cam.transform.position = new Vector3(0f, 0f, -10f);
             _cam.backgroundColor = new Color(0.90f, 0.84f, 0.98f); // matches the gradient's bottom
+
+            // Grow the backdrop to always cover the full viewport — on tablets the real aspect is
+            // wider than the framed one, so the visible area extends past the phone-width cluster and
+            // the gradient must stretch to fill those side margins (only the background expands).
+            if (_pageBg != null)
+            {
+                float visH = _cam.orthographicSize * 2f;
+                float visW = visH * aspect;   // real aspect → fills the actual (wide) viewport
+                _pageBg.localScale = new Vector3(Mathf.Max(24f, visW * 1.06f), Mathf.Max(22f, visH * 1.06f), 1f);
+            }
         }
 
         private void Update()
         {
+            if (_bannerLayoutDirty) { _bannerLayoutDirty = false; RelayoutForBanner(); }
             if (_session == null) return;
             // popups, the tutorial coach-mark, AND a full-screen ad all pause the clock (watching a
             // rewarded ad must never burn the level timer)

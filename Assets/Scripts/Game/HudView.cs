@@ -55,13 +55,15 @@ namespace ColorMergeExit.Game
         public const int AddTimeSeconds = 15;
 
         private float _maxTime = 1f, _barW = 6f, _barY;
+        private float _bottomBannerWorld;   // screen-bottom space taken by the native AdMob banner (world units)
 
         public void Build(int boardWidth, int boardHeight, GameSprites sprites,
-            int levelId, float camHalfHeight, float maxTime)
+            int levelId, float camHalfHeight, float maxTime, float bottomBannerWorld = 0f)
         {
             _sprites = sprites;
             _maxTime = Mathf.Max(1f, maxTime);
             _camHalf = camHalfHeight;
+            _bottomBannerWorld = Mathf.Max(0f, bottomBannerWorld);
             _resultRoot = null; _confirmRoot = null;   // cleared with the children below
 
             for (int i = transform.childCount - 1; i >= 0; i--)
@@ -74,6 +76,12 @@ namespace ColorMergeExit.Game
             float boardTop = boardHeight * 0.5f;
             _barY = boardTop + 1.5f;   // extra gap between the timer bar and the top-row exit doors
             float topY = Mathf.Min(_barY + 2.35f, camHalfHeight - 1.7f);
+            // On wide framings (tablets) camHalfHeight is width-driven and large, so the top cap above
+            // would drag the whole header stack DOWN until the timer bar lands on the board's top row.
+            // Floor topY so the bar always keeps a real gap above the board (it only lifts the header
+            // when the cap would otherwise overlap; on tall phones this is a no-op).
+            const float MinBarGapAboveBoard = 0.9f;
+            topY = Mathf.Max(topY, boardTop + MinBarGapAboveBoard + 2.35f);
             _barY = topY - 2.35f;
 
             // Header: prominent stage label
@@ -150,6 +158,16 @@ namespace ColorMergeExit.Game
             // Items hug just under the board (not pinned to the screen bottom) so the board+items
             // read as one centred cluster instead of leaving a big empty gap between them.
             float itemY = Mathf.Max(-(boardHeight * 0.5f) - 2.3f, -(camHalfHeight - 1.6f));
+            // Keep the whole item (button + its bottom-right count/padlock badge, which hangs ~0.94
+            // below the centre) clear of the native AdMob banner at the screen bottom. Without this the
+            // padlock badges render behind the banner on devices with a tall (tablet) banner.
+            if (_bottomBannerWorld > 0f)
+            {
+                const float ItemReachBelow = 0.98f;   // badge/padlock extent below the button centre
+                const float BannerMargin = 0.45f;
+                float itemFloorY = -camHalfHeight + _bottomBannerWorld + ItemReachBelow + BannerMargin;
+                itemY = Mathf.Max(itemY, itemFloorY);
+            }
             // All three items share ONE rendering path (procedural glossy button + white glyph) so
             // they're pixel-identical in size — hint (bulb), +time (clock), split (4-way arrows).
             // Counts come from the persistent ItemStore; locked items grey out with a padlock badge.

@@ -68,6 +68,16 @@ namespace ColorMergeExit.Game
         private static RewardedAd _rewarded;
         private static int _levelsSinceInterstitial;
 
+        /// <summary>Height in device pixels of the on-screen bottom banner, or 0 when none is loaded.
+        /// The native banner is an overlay Unity's camera can't see, so the HUD reserves this much space
+        /// at the screen bottom to keep the ITEMS row from hiding behind it. Known only AFTER the banner
+        /// loads (adaptive height depends on the device), so <see cref="OnBannerChanged"/> fires then.</summary>
+        public static float BannerHeightPixels { get; private set; }
+
+        /// <summary>Raised when the banner loads/relayouts and <see cref="BannerHeightPixels"/> changes,
+        /// so the HUD can re-reserve the correct bottom inset.</summary>
+        public static event Action OnBannerChanged;
+
         /// <summary>True while a full-screen ad (interstitial or rewarded) is on screen. The game
         /// clock is paused while this is set so watching an ad never burns the player's level timer.</summary>
         public static bool IsShowing { get; private set; }
@@ -93,6 +103,13 @@ namespace ColorMergeExit.Game
                 // left/right edges) with an SDK-chosen height, instead of the fixed 320px banner.
                 AdSize size = AdSize.GetCurrentOrientationAnchoredAdaptiveBannerAdSizeWithWidth(AdSize.FullWidth);
                 _banner = new BannerView(BannerId, size, AdPosition.Bottom);
+                // Publish the real (device-dependent) banner height once it loads so the HUD can reserve
+                // exactly that much space at the screen bottom. GetHeightInPixels is only valid post-load.
+                _banner.OnBannerAdLoaded += () =>
+                {
+                    BannerHeightPixels = _banner.GetHeightInPixels();
+                    OnBannerChanged?.Invoke();
+                };
                 _banner.LoadAd(new AdRequest());
             }
             _banner.Show();

@@ -44,7 +44,7 @@ namespace ColorMergeExit.Editor
             PlayerSettings.iOS.sdkVersion = device ? iOSSdkVersion.DeviceSDK : iOSSdkVersion.SimulatorSDK;
             PlayerSettings.iOS.targetOSVersionString = "15.0";
             PlayerSettings.defaultInterfaceOrientation = UIOrientation.Portrait;
-            PlayerSettings.iOS.targetDevice = iOSTargetDevice.iPhoneOnly; // iPhone-only (no iPad layout)
+            PlayerSettings.iOS.targetDevice = iOSTargetDevice.iPhoneAndiPad; // Universal: iPad runs full-screen (phone-width board, background fills the sides)
 
             // Device build → automatic cloud signing under the ongil team (the actual signing cert +
             // profile are resolved by xcodebuild -allowProvisioningUpdates with the ASC API key at

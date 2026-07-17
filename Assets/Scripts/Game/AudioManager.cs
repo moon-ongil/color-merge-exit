@@ -18,6 +18,8 @@ namespace ColorMergeExit.Game
         [System.Runtime.InteropServices.DllImport("__Internal")]
         private static extern void _CME_SetAudioSessionPlayback();
         [System.Runtime.InteropServices.DllImport("__Internal")]
+        private static extern void _CME_SetAudioSessionMixAmbient();
+        [System.Runtime.InteropServices.DllImport("__Internal")]
         private static extern int _CME_IsOtherAudioPlaying();
 #endif
         // Play sound even when the iOS Ring/Silent switch is muted (see AudioSession.mm). Re-applied on
@@ -26,6 +28,15 @@ namespace ColorMergeExit.Game
         {
 #if UNITY_IOS && !UNITY_EDITOR
             _CME_SetAudioSessionPlayback();
+#endif
+        }
+
+        // A live but non-interrupting (Ambient) session — used when the player has their own music going.
+        // Keeps OUR session active so game SFX play, without taking over their music.
+        private static void ApplyMixAmbientSession()
+        {
+#if UNITY_IOS && !UNITY_EDITOR
+            _CME_SetAudioSessionMixAmbient();
 #endif
         }
 
@@ -40,21 +51,22 @@ namespace ColorMergeExit.Game
 #endif
         }
 
-        // Grab a Playback session (so our sound plays through the Ring/Silent switch) ONLY when the
-        // player isn't already listening to their own music. Forcing/activating a Playback session
-        // interrupts another app's audio even with MixWithOthers, so when they ARE playing music we leave
-        // Unity's mixing session untouched — their music keeps going and our SFX still mix in.
+        // Pick the audio session by whether the player is already listening to their own music:
+        //  • their music playing → Ambient (mixes, never interrupts them) but still ACTIVE so our SFX play
+        //  • nothing else playing → Playback, so our audio plays through the Ring/Silent switch
+        // Forcing/activating a Playback session interrupts another app's audio, so we must NOT use it then.
         private static void ConfigureAudioSession()
         {
-            if (!OtherAudioPlaying()) ApplyPlaybackAudioSession();
+            if (OtherAudioPlaying()) ApplyMixAmbientSession();
+            else ApplyPlaybackAudioSession();
         }
 
-        // On focus regain the player may have started or stopped their own music while away — re-decide
-        // whether to grab the session / play our BGM, so we never interrupt or talk over their music.
+        // On focus regain the player may have started or stopped their own music while away — re-pick the
+        // session and re-decide our BGM, so we never interrupt their music yet our SFX keep playing.
         private void OnApplicationFocus(bool focus)
         {
             if (!focus) return;
-            if (OtherAudioPlaying()) { if (_music != null && _music.isPlaying) _music.Stop(); }
+            if (OtherAudioPlaying()) { ApplyMixAmbientSession(); if (_music != null && _music.isPlaying) _music.Stop(); }
             else { ApplyPlaybackAudioSession(); PlayMusic(); }
         }
 

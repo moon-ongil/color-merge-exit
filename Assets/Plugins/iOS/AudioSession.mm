@@ -14,9 +14,20 @@ extern "C" void _CME_SetAudioSessionPlayback(void)
     [session setActive:YES error:&err];
 }
 
-// True when another app (Music/Spotify/Genie/…) is already playing audio. Used so the game can
-// DEFER its own BGM to the player's music instead of layering on top of it. MixWithOthers means we
-// never interrupt that audio; this just tells us whether to add our BGM at all.
+// Mixing category used when the player already has their own music going. Ambient NEVER interrupts
+// other apps' audio, so their music keeps playing — but we still setActive:YES so OUR session is
+// live and game SFX actually come out (an inactive session = no game sound). Ambient is silenced by
+// the Ring/Silent switch, which is fine: we only use it when the player is already listening to audio.
+extern "C" void _CME_SetAudioSessionMixAmbient(void)
+{
+    NSError *err = nil;
+    AVAudioSession *session = [AVAudioSession sharedInstance];
+    [session setCategory:AVAudioSessionCategoryAmbient error:&err];
+    [session setActive:YES error:&err];
+}
+
+// True when another app (Music/Spotify/Genie/…) is already playing audio. Used so the game can DEFER
+// its own BGM to the player's music and pick the non-interrupting Ambient session instead of Playback.
 extern "C" int _CME_IsOtherAudioPlaying(void)
 {
     return [AVAudioSession sharedInstance].isOtherAudioPlaying ? 1 : 0;

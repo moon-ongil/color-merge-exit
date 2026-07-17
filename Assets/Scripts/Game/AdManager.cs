@@ -82,15 +82,6 @@ namespace ColorMergeExit.Game
         /// clock is paused while this is set so watching an ad never burns the player's level timer.</summary>
         public static bool IsShowing { get; private set; }
 
-        /// <summary>Toggle the full-screen-ad state in one place: also pauses the BGM while an ad is on
-        /// screen and resumes it when the ad closes, so the music never plays over the ad's audio.</summary>
-        private static void SetShowing(bool showing)
-        {
-            IsShowing = showing;
-            if (showing) AudioManager.Instance?.PauseMusic();
-            else AudioManager.Instance?.ResumeMusic();
-        }
-
         public static void Initialize()
         {
             if (_initialized) return;
@@ -133,10 +124,10 @@ namespace ColorMergeExit.Game
             {
                 if (error != null || ad == null) return;
                 _interstitial = ad;
-                _interstitial.OnAdFullScreenContentOpened += () => SetShowing(true);
+                _interstitial.OnAdFullScreenContentOpened += () => IsShowing = true;
                 _interstitial.OnAdFullScreenContentClosed += () =>
                 {
-                    SetShowing(false);
+                    IsShowing = false;
                     _interstitial.Destroy();
                     _interstitial = null;
                     LoadInterstitial();
@@ -169,10 +160,10 @@ namespace ColorMergeExit.Game
             {
                 if (error != null || ad == null) return;
                 _rewarded = ad;
-                _rewarded.OnAdFullScreenContentOpened += () => SetShowing(true);
+                _rewarded.OnAdFullScreenContentOpened += () => IsShowing = true;
                 _rewarded.OnAdFullScreenContentClosed += () =>
                 {
-                    SetShowing(false);
+                    IsShowing = false;
                     _rewarded.Destroy();
                     _rewarded = null;
                     LoadRewarded();

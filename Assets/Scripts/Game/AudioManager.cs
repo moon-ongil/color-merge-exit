@@ -79,6 +79,20 @@ namespace ColorMergeExit.Game
             }
         }
 
+        /// <summary>Pause the looping BGM (e.g. while a full-screen ad plays). Paused, not stopped, so
+        /// <see cref="ResumeMusic"/> continues from the same spot.</summary>
+        public void PauseMusic()
+        {
+            if (_music != null && _music.isPlaying) _music.Pause();
+        }
+
+        /// <summary>Resume the BGM after it was paused (e.g. when a full-screen ad closes). Mute stays
+        /// handled globally by AudioListener.volume, so this is safe to call even while muted.</summary>
+        public void ResumeMusic()
+        {
+            if (_music != null) _music.UnPause();
+        }
+
         private static AudioClip Load(string name) => Resources.Load<AudioClip>("Audio/" + name);
 
         private void Play(AudioClip clip, float volume)

@@ -954,11 +954,11 @@ namespace ColorMergeExit.Game
                 case CarColor.Green: return new Color(0.16f, 0.80f, 0.36f);
                 case CarColor.Purple: return new Color(0.62f, 0.28f, 0.93f);
                 case CarColor.Orange: return new Color(1.00f, 0.50f, 0.00f);  // pure vivid orange
-                case CarColor.Pink: return new Color(1.00f, 0.38f, 0.74f);    // hot magenta pink
+                case CarColor.Pink: return new Color(0.92f, 0.26f, 0.62f);    // red+purple rose-magenta (deeper, closer to the real mix)
                 case CarColor.Teal: return new Color(0.05f, 0.78f, 0.74f);
                 case CarColor.Lime: return new Color(0.68f, 0.90f, 0.10f);
                 case CarColor.Brown: return new Color(0.52f, 0.35f, 0.20f);
-                case CarColor.Coral: return new Color(1.00f, 0.56f, 0.56f);   // light salmon-pink
+                case CarColor.Coral: return new Color(1.00f, 0.42f, 0.28f);   // red+orange coral — warm vermilion with a touch of pink to stay distinct from Orange
                 case CarColor.Indigo: return new Color(0.34f, 0.30f, 0.92f);  // deep blue-violet
                 case CarColor.Amber: return new Color(0.92f, 0.68f, 0.16f);   // deep gold / mustard
                 default: return Color.gray;

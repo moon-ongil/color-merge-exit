@@ -40,20 +40,28 @@ namespace ColorMergeExit.Game
 #endif
         }
 
+        // Grab a Playback session (so our sound plays through the Ring/Silent switch) ONLY when the
+        // player isn't already listening to their own music. Forcing/activating a Playback session
+        // interrupts another app's audio even with MixWithOthers, so when they ARE playing music we leave
+        // Unity's mixing session untouched — their music keeps going and our SFX still mix in.
+        private static void ConfigureAudioSession()
+        {
+            if (!OtherAudioPlaying()) ApplyPlaybackAudioSession();
+        }
+
         // On focus regain the player may have started or stopped their own music while away — re-decide
-        // whether our BGM should play, so we never talk over their music.
+        // whether to grab the session / play our BGM, so we never interrupt or talk over their music.
         private void OnApplicationFocus(bool focus)
         {
             if (!focus) return;
-            ApplyPlaybackAudioSession();
             if (OtherAudioPlaying()) { if (_music != null && _music.isPlaying) _music.Stop(); }
-            else PlayMusic();
+            else { ApplyPlaybackAudioSession(); PlayMusic(); }
         }
 
         private void Awake()
         {
             Instance = this;
-            ApplyPlaybackAudioSession();
+            ConfigureAudioSession();
 
             _sfx = gameObject.AddComponent<AudioSource>();
             _sfx.playOnAwake = false;

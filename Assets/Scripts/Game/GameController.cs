@@ -36,6 +36,8 @@ namespace ColorMergeExit.Game
         private bool _exR, _exL, _exD, _exU;
         private bool _mgR, _mgL, _mgD, _mgU;
         private bool _doorR, _doorL, _doorD, _doorU;   // a wrong-colour door in each dir → bounce
+        private bool _blockR, _blockL, _blockD, _blockU;   // a non-mergeable block in each dir → repel
+        private int _blockIdR, _blockIdL, _blockIdD, _blockIdU;  // that block's id (for the recoil), or -1
         private HudButton _pressedButton = HudButton.None;
         private Coroutine _snapTween;
         // TEMP: input diagnostics for the "merged block sometimes won't move" bug. Logs are tagged
@@ -486,6 +488,10 @@ namespace ColorMergeExit.Game
                     _doorL = _session.Board.BlockedDoorAhead(b.Id, -1, 0);
                     _doorD = _session.Board.BlockedDoorAhead(b.Id, 0, 1);
                     _doorU = _session.Board.BlockedDoorAhead(b.Id, 0, -1);
+                    _blockR = _session.Board.BlockedByBlockAhead(b.Id, 1, 0, out _blockIdR);
+                    _blockL = _session.Board.BlockedByBlockAhead(b.Id, -1, 0, out _blockIdL);
+                    _blockD = _session.Board.BlockedByBlockAhead(b.Id, 0, 1, out _blockIdD);
+                    _blockU = _session.Board.BlockedByBlockAhead(b.Id, 0, -1, out _blockIdU);
                     if (DebugInput) Debug.Log($"[MERGEDBG] PICK id={b.Id} color={b.Color} locked={b.Locked} axis={b.Axis} cell=({cx},{cy}) maxR={_maxR} maxL={_maxL} maxD={_maxD} maxU={_maxU} ex(RLDU)={_exR}{_exL}{_exD}{_exU} mg(RLDU)={_mgR}{_mgL}{_mgD}{_mgU} snap={( _snapTween!=null)}");
                 }
                 else if (DebugInput)
@@ -570,6 +576,7 @@ namespace ColorMergeExit.Game
             _dragging = false;
             bool moved = false;
             Vector3 bounceDir = Vector3.zero;   // set when the player shoves a block at a wrong-colour door
+            int bumpBlockerId = -2;   // >=0 / -1 = shoved into a non-mergeable block (repel); -2 = door bounce
 
             if (_session.Board.TryGetBlock(_dragBlockId, out var b) && _session.State == SessionState.Playing)
             {
@@ -585,6 +592,9 @@ namespace ColorMergeExit.Game
                     // shoved past a door it can't use → bounce (world x: right = +, left = -)
                     if (!pR && _doorR && gdx >= _maxR + 0.5f) bounceDir = Vector3.right;
                     else if (!pL && _doorL && gdx <= -(_maxL + 0.5f)) bounceDir = Vector3.left;
+                    // shoved into a non-mergeable block → repel both
+                    else if (!pR && _blockR && gdx >= _maxR + 0.5f) { bounceDir = Vector3.right; bumpBlockerId = _blockIdR; }
+                    else if (!pL && _blockL && gdx <= -(_maxL + 0.5f)) { bounceDir = Vector3.left; bumpBlockerId = _blockIdL; }
                 }
                 else
                 {
@@ -596,6 +606,9 @@ namespace ColorMergeExit.Game
                     // grid +y = down (screen), so a bottom-door shove bounces toward world -y and vice versa
                     if (!pD && _doorD && gdy >= _maxD + 0.5f) bounceDir = Vector3.down;
                     else if (!pU && _doorU && gdy <= -(_maxU + 0.5f)) bounceDir = Vector3.up;
+                    // shoved into a non-mergeable block → repel both
+                    else if (!pD && _blockD && gdy >= _maxD + 0.5f) { bounceDir = Vector3.down; bumpBlockerId = _blockIdD; }
+                    else if (!pU && _blockU && gdy <= -(_maxU + 0.5f)) { bounceDir = Vector3.up; bumpBlockerId = _blockIdU; }
                 }
 
                 if (stepX != 0 || stepY != 0)
@@ -656,8 +669,18 @@ namespace ColorMergeExit.Game
                 if (_snapTween != null) StopCoroutine(_snapTween);
                 if (bounceDir != Vector3.zero)
                 {
-                    AudioManager.Instance?.Slide();   // soft "bump" against the wrong-colour door
-                    _board.DoorBump(_dragBlockId, bounceDir);   // shake the door it hit
+                    if (bumpBlockerId != -2)
+                    {
+                        // repelled by a non-mergeable block: thunk + recoil the block it hit, so the two
+                        // visibly bounce off each other (the dragged block springs back via BounceEase).
+                        AudioManager.Instance?.Bump();
+                        if (bumpBlockerId >= 0) _board.BlockBump(bumpBlockerId, bounceDir);
+                    }
+                    else
+                    {
+                        AudioManager.Instance?.Slide();   // soft "bump" against the wrong-colour door
+                        _board.DoorBump(_dragBlockId, bounceDir);   // shake the door it hit
+                    }
                     _snapTween = StartCoroutine(BounceEase(_dragBlockId, toPos, bounceDir, 0.26f));
                 }
                 else

@@ -209,6 +209,39 @@ namespace ColorMergeExit.Core
             return false;
         }
 
+        /// <summary>True if, sliding as far as it can in (dx,dy), the block ends up pressed against another
+        /// block it CANNOT merge with (different shape, unmixable colours, or more than one block ahead) —
+        /// the cue for a "blocks repel" bounce. False when it's instead stopped by a wall, an open edge/door,
+        /// or a block it CAN actually merge with. <paramref name="blockerId"/> is the single blocking block
+        /// (for a recoil), or -1 when several blocks share the leading face.</summary>
+        public bool BlockedByBlockAhead(int blockId, int dx, int dy, out int blockerId)
+        {
+            blockerId = -1;
+            if (!_blocks.TryGetValue(blockId, out var b)) return false;
+            if (b.Locked || !b.CanMove(dx, dy)) return false;
+            var probe = b.Clone();
+            while (true)
+            {
+                InspectLeading(probe, dx, dy, out bool offBoard, out bool wallHit, out int single, out int distinct);
+                if (wallHit) return false;                    // stopped by a wall, not a block
+                if (distinct > 0)
+                {
+                    // Exactly the merge test from TryMove: same shape + mixable colours fuses instead of bouncing.
+                    if (!offBoard && single >= 0 &&
+                        _blocks.TryGetValue(single, out var other) &&
+                        probe.SameShapeAs(other) &&
+                        ColorMix.TryMix(probe.Color, other.Color, out _))
+                        return false;                         // a legal merge → no bounce
+                    blockerId = single;                       // >=0 when one block, -1 when several
+                    return true;                              // non-mergeable block(s) ahead → bounce
+                }
+                if (offBoard) return false;                   // reached the edge (doors handled elsewhere)
+                probe.X += dx; probe.Y += dy;
+                ApplyPaint(probe);
+                if (CanSplit(probe, dx, dy, out _, out _)) return false; // a splitter halts before contact
+            }
+        }
+
         /// <summary>Move a block by up to |steps| along one axis. It slides until blocked
         /// or, at the edge, exits through a matching door (whole-block fit).</summary>
         public MoveResult TryMove(int blockId, int stepX, int stepY)

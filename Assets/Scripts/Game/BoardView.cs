@@ -551,6 +551,40 @@ namespace ColorMergeExit.Game
             if (t != null) t.localScale = baseScale;
         }
 
+        /// <summary>Two blocks that can't merge collided: knock the BLOCKING block a touch in the push
+        /// direction, then spring it back, so the pair visibly repels. The pushed block is sprung back by
+        /// the caller's BounceEase, so together they read as bouncing off each other.</summary>
+        public void BlockBump(int blockerId, Vector3 worldDir)
+        {
+            if (!_blocks.TryGetValue(blockerId, out var bv) || bv.Root == null) return;
+            StartCoroutine(BumpRecoil(blockerId, worldDir));
+        }
+
+        private IEnumerator BumpRecoil(int id, Vector3 dir)
+        {
+            if (!TryGetBlockLocalPosition(id, out var rest)) yield break;
+            Vector3 peak = rest + dir * 0.16f;              // small nudge away from the pusher
+            const float dur = 0.22f; float outT = dur * 0.3f, backT = dur - outT;
+            float t = 0f;
+            while (t < outT)
+            {
+                t += Time.deltaTime;
+                float k = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(t / outT));
+                SetBlockLocalPosition(id, Vector3.Lerp(rest, peak, k));
+                yield return null;
+            }
+            t = 0f;
+            while (t < backT)
+            {
+                t += Time.deltaTime;
+                float k = Mathf.Clamp01(t / backT);
+                k = 1f - (1f - k) * (1f - k);               // ease-out spring back
+                SetBlockLocalPosition(id, Vector3.Lerp(peak, rest, k));
+                yield return null;
+            }
+            SetBlockLocalPosition(id, rest);
+        }
+
         // A wrong-colour block was shoved at a door — jolt THAT door (bar + arrow + pips) outward with a
         // quick decaying shake so it clearly reads as "this isn't your exit".
         public void DoorBump(int blockId, Vector3 worldDir)

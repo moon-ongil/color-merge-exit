@@ -12,7 +12,7 @@ namespace ColorMergeExit.Game
         public static AudioManager Instance { get; private set; }
 
         private AudioSource _sfx, _music;
-        private AudioClip _slide, _exit, _win, _lose, _tap, _merge, _bgm;
+        private AudioClip _slide, _exit, _win, _lose, _tap, _merge, _bump, _bgm;
 
 #if UNITY_IOS && !UNITY_EDITOR
         [System.Runtime.InteropServices.DllImport("__Internal")]
@@ -48,6 +48,7 @@ namespace ColorMergeExit.Game
             _lose = Load("lose");
             _tap = Load("tap");
             _merge = Load("merge");
+            _bump = Load("bump");
             _bgm = Load("bgm");
 
             AudioListener.volume = Muted ? 0f : 1f;
@@ -90,6 +91,9 @@ namespace ColorMergeExit.Game
         public void Win() => Play(_win, 0.9f);
         public void Lose() => Play(_lose, 0.8f);
         public void Tap() => Play(_tap, 0.5f);
+
+        /// <summary>Dull thunk when two blocks that can't merge knock against each other.</summary>
+        public void Bump() => Play(_bump, 0.7f);
 
         /// <summary>Merge blend/ding; pitch>1 for the brighter tertiary (chain) merge.</summary>
         public void Merge(float pitch = 1f)

@@ -131,9 +131,23 @@ def sfx_lose():
             out.append(0.45*env*tri(f*vib, t))
     save("lose", out)
 
+def sfx_bump():
+    # Two blocks that can't merge knock together: a short, dull, low "thunk" with a downward pitch
+    # bend (soft rubber/wood knock). No bright harmonics, so it reads as "blocked" — clearly unlike
+    # the merge ding or the slide swish.
+    n = int(SR*0.13); out = []
+    for i in range(n):
+        t = i/SR
+        env = math.exp(-32*t) * (1 - math.exp(-500*t))    # snappy attack, quick decay
+        f = 150*math.exp(-7*t) + 60                        # low, bends ~210 -> 60 Hz
+        s = 0.7*math.sin(2*math.pi*f*t) + 0.18*tri(f*2, t)
+        s += 0.12*(random.random()*2-1)*math.exp(-90*t)    # tiny click transient on the hit
+        out.append(s*env)
+    save("bump", out)
+
 if __name__ == "__main__":
     dur = make_bgm()
-    sfx_tap(); sfx_slide(); sfx_exit(); sfx_merge(); sfx_win(); sfx_lose()
+    sfx_tap(); sfx_slide(); sfx_exit(); sfx_merge(); sfx_win(); sfx_lose(); sfx_bump()
     import os
     print(f"BGM loop: {dur:.1f}s")
     for f in sorted(os.listdir(DST)):

@@ -17,6 +17,8 @@ namespace ColorMergeExit.Game
 #if UNITY_IOS && !UNITY_EDITOR
         [System.Runtime.InteropServices.DllImport("__Internal")]
         private static extern void _CME_SetAudioSessionPlayback();
+        [System.Runtime.InteropServices.DllImport("__Internal")]
+        private static extern int _CME_IsOtherAudioPlaying();
 #endif
         // Play sound even when the iOS Ring/Silent switch is muted (see AudioSession.mm). Re-applied on
         // focus regain because Unity re-initialises its own audio session when the app returns to front.
@@ -27,7 +29,26 @@ namespace ColorMergeExit.Game
 #endif
         }
 
-        private void OnApplicationFocus(bool focus) { if (focus) ApplyPlaybackAudioSession(); }
+        // True when the player already has their own music going (Genie, Spotify, Apple Music…). We DEFER
+        // our BGM to it rather than playing over the top — SFX still mix in (session is MixWithOthers).
+        private static bool OtherAudioPlaying()
+        {
+#if UNITY_IOS && !UNITY_EDITOR
+            return _CME_IsOtherAudioPlaying() != 0;
+#else
+            return false;
+#endif
+        }
+
+        // On focus regain the player may have started or stopped their own music while away — re-decide
+        // whether our BGM should play, so we never talk over their music.
+        private void OnApplicationFocus(bool focus)
+        {
+            if (!focus) return;
+            ApplyPlaybackAudioSession();
+            if (OtherAudioPlaying()) { if (_music != null && _music.isPlaying) _music.Stop(); }
+            else PlayMusic();
+        }
 
         private void Awake()
         {
@@ -72,11 +93,11 @@ namespace ColorMergeExit.Game
 
         public void PlayMusic()
         {
-            if (_bgm != null && _music != null)
-            {
-                _music.clip = _bgm;
-                if (!_music.isPlaying) _music.Play();
-            }
+            if (_bgm == null || _music == null) return;
+            // Defer to the player's own music if they're already listening to something.
+            if (OtherAudioPlaying()) { if (_music.isPlaying) _music.Stop(); return; }
+            _music.clip = _bgm;
+            if (!_music.isPlaying) _music.Play();
         }
 
         private static AudioClip Load(string name) => Resources.Load<AudioClip>("Audio/" + name);

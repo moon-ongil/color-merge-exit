@@ -13,3 +13,11 @@ extern "C" void _CME_SetAudioSessionPlayback(void)
                    error:&err];
     [session setActive:YES error:&err];
 }
+
+// True when another app (Music/Spotify/Genie/…) is already playing audio. Used so the game can
+// DEFER its own BGM to the player's music instead of layering on top of it. MixWithOthers means we
+// never interrupt that audio; this just tells us whether to add our BGM at all.
+extern "C" int _CME_IsOtherAudioPlaying(void)
+{
+    return [AVAudioSession sharedInstance].isOtherAudioPlaying ? 1 : 0;
+}

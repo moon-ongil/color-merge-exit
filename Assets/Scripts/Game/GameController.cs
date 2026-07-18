@@ -759,10 +759,18 @@ namespace ColorMergeExit.Game
             }
         }
 
+        // Any full-screen UI that pauses play. The dead-end grace must pause with it — otherwise its
+        // real-time countdown keeps ticking behind a menu and OnDeadEnd fires the result dialog ON TOP of
+        // an open Settings/EXIT?/etc. dialog (two overlapping dialogs).
+        private bool UiBlocking =>
+            _hud.SettingsOpen || _hud.InfoOpen || _hud.ConfirmOpen || _hud.ResultOpen
+            || TutorialBlocking || AdManager.IsShowing;
+
         // While a dead end is pending, show a live countdown; fail only once the grace elapses.
         private void HandleDeadEndGrace()
         {
             if (_deadEndFailAt < 0f || _ended || _session.State != SessionState.Playing) return;
+            if (UiBlocking) { _deadEndFailAt += Time.deltaTime; return; } // pause the grace behind a dialog/ad
             float remain = _deadEndFailAt - Time.time;
             if (remain <= 0f) { OnDeadEnd(); return; }
             _hud.ShowBanner($"{Localization.Get(LocKeys.DeadEnd)}\n{Mathf.CeilToInt(remain)}", new Color(0.98f, 0.55f, 0.42f));

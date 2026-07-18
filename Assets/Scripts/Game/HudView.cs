@@ -313,6 +313,7 @@ namespace ColorMergeExit.Game
         public void ShowResult(bool won, bool hasHearts, int stars, string title, Color titleColor)
         {
             HideBanner();   // clear any centre banner (e.g. the dead-end countdown) so it can't show through
+            HideConfirm();  // never stack the result on top of an open RESTART?/EXIT? dialog
             if (_resultRoot != null) Destroy(_resultRoot);
             _resultRoot = new GameObject("ResultOverlay");
             _resultRoot.transform.SetParent(transform, false);

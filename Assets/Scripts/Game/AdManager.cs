@@ -79,8 +79,11 @@ namespace ColorMergeExit.Game
         public static event Action OnBannerChanged;
 
         /// <summary>True while a full-screen ad (interstitial or rewarded) is on screen. The game
-        /// clock is paused while this is set so watching an ad never burns the player's level timer.</summary>
-        public static bool IsShowing { get; private set; }
+        /// clock is paused while this is set so watching an ad never burns the player's level timer.
+        /// Written from GMA callbacks (which can arrive off the main thread) and read every frame by the
+        /// game loop, so the backing field is volatile to avoid a stale read keeping the clock paused.</summary>
+        private static volatile bool _isShowing;
+        public static bool IsShowing => _isShowing;
 
         public static void Initialize()
         {
@@ -124,11 +127,20 @@ namespace ColorMergeExit.Game
             {
                 if (error != null || ad == null) return;
                 _interstitial = ad;
-                _interstitial.OnAdFullScreenContentOpened += () => IsShowing = true;
+                _interstitial.OnAdFullScreenContentOpened += () => _isShowing = true;
                 _interstitial.OnAdFullScreenContentClosed += () =>
                 {
-                    IsShowing = false;
+                    _isShowing = false;
                     _interstitial.Destroy();
+                    _interstitial = null;
+                    LoadInterstitial();
+                };
+                // If it fails to PRESENT, clear the paused-clock flag and reload — else IsShowing could
+                // latch true and freeze the game clock.
+                _interstitial.OnAdFullScreenContentFailed += _ =>
+                {
+                    _isShowing = false;
+                    _interstitial?.Destroy();
                     _interstitial = null;
                     LoadInterstitial();
                 };
@@ -160,11 +172,18 @@ namespace ColorMergeExit.Game
             {
                 if (error != null || ad == null) return;
                 _rewarded = ad;
-                _rewarded.OnAdFullScreenContentOpened += () => IsShowing = true;
+                _rewarded.OnAdFullScreenContentOpened += () => _isShowing = true;
                 _rewarded.OnAdFullScreenContentClosed += () =>
                 {
-                    IsShowing = false;
+                    _isShowing = false;
                     _rewarded.Destroy();
+                    _rewarded = null;
+                    LoadRewarded();
+                };
+                _rewarded.OnAdFullScreenContentFailed += _ =>
+                {
+                    _isShowing = false;
+                    _rewarded?.Destroy();
                     _rewarded = null;
                     LoadRewarded();
                 };
@@ -181,8 +200,13 @@ namespace ColorMergeExit.Game
             }
             else
             {
+                // No ad ready yet: preload one for next time. In a PRODUCTION build we must NOT grant the
+                // reward without an ad actually being watched (otherwise Airplane Mode = free hearts/items
+                // forever). In dev/test builds we still grant so testing isn't blocked by ad fill.
                 LoadRewarded();
-                onReward?.Invoke(); // fallback so the player isn't blocked if the ad hasn't loaded
+#if !PRODUCTION_ADS
+                onReward?.Invoke();
+#endif
             }
         }
     }

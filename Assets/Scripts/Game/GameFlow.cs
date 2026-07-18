@@ -54,17 +54,17 @@ namespace ColorMergeExit.Game
                 ShowSelect();
         }
 
-        // Show the iOS ATT prompt immediately, gather UMP (GDPR) consent, THEN initialize the ads SDK so
-        // the first ad request already carries the right consent. The UMP step has a short timeout so a
-        // no-op UMP (e.g. the simulator stubs) can never block ad initialization.
+        // Sequence the iOS ATT prompt THEN the UMP (GDPR) consent form (so the two system modals never
+        // fight to present), and only initialize the ads SDK once consent is gathered, so the first ad
+        // request already carries the right consent. The timeout is a fallback so a no-op UMP (the
+        // simulator stub, which never calls back) can't block ad init forever; a real EEA user's form
+        // answer arrives well within it. Ad init is off the gameplay path, so this wait never blocks play.
         private System.Collections.IEnumerator GatherConsentThenInitAds()
         {
-            Att.Request(null);   // iOS ATT prompt right away (no-op off iOS)
-
             bool umpDone = false;
-            Consent.RequestUmp(() => umpDone = true);
+            Att.Request(() => Consent.RequestUmp(() => umpDone = true)); // ATT first, then the UMP form
             float t = 0f;
-            while (!umpDone && t < 3f) { t += Time.unscaledDeltaTime; yield return null; }
+            while (!umpDone && t < 8f) { t += Time.unscaledDeltaTime; yield return null; }
 
             AdManager.Initialize();
         }

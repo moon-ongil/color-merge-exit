@@ -720,6 +720,10 @@ namespace ColorMergeExit.Game
         private void CheckDeadEnd()
         {
             if (_ended) return;
+            // The board just changed (move / undo / level start): cancel any pending grace deadline NOW so
+            // a last-second escape can't still fire a false loss before the async re-check confirms it's
+            // solvable. If it's still stuck, ApplyDeadEndResult re-arms the grace from the new verdict.
+            _deadEndFailAt = -1f;
             int gen = ++_checkGen;
             var snap = Solver.Capture(_session.Board); // main thread reads the board
             System.Threading.Tasks.Task.Run(() =>

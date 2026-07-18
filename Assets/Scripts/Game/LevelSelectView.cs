@@ -663,6 +663,10 @@ namespace ColorMergeExit.Game
                 }
                 if (_dragging) { Rebuild(); return; }   // rebuild the visible window after a scroll
 
+                // A tap on the opaque header band (bottom edge ≈ _safeTop-1.67) must not reach a node that
+                // has scrolled up behind it — otherwise tapping the logo/title launches a hidden level.
+                if (world.y > _safeTop - 1.67f) return;
+
                 // tap: hit-test nodes in content-local space
                 foreach (var (level, lp) in _hit)
                 {

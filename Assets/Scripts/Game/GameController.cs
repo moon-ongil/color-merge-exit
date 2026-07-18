@@ -309,6 +309,9 @@ namespace ColorMergeExit.Game
         private void ApplyHintResult()
         {
             if (!_hintReady) return;
+            // Hold the result behind a transient blocking UI (menu/ad/tutorial) so we don't spend a charge
+            // or animate the board out of sight; if the level already ended, fall through and drop it.
+            if (!_ended && UiBlocking) return;
             _hintReady = false; _hintPending = false;
             if (!_hintMove.Found || _ended || _session.State != SessionState.Playing) return;
             if (!_hud.UseHint()) return; // spend one charge now that a move was found
@@ -543,6 +546,10 @@ namespace ColorMergeExit.Game
 
             if (_pressedButton != HudButton.None)
             {
+                // A result/confirm dialog may have opened between press and release (e.g. the level timer
+                // or dead-end grace elapsed while the gear was held) — drop the latched press so it can't
+                // toggle a menu on top of the dialog.
+                if (_ended || _hud.ResultOpen || _hud.ConfirmOpen) { _pressedButton = HudButton.None; return; }
                 if (_hud.ButtonAtWorld(world) == _pressedButton)
                 {
                     AudioManager.Instance?.Tap();

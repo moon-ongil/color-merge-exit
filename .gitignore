@@ -25,3 +25,8 @@ Assets/Firebase/Plugins/x86_64/
 
 # 에이전트 도구의 런타임 상태
 .omc/
+# Android upload keystore (백업은 별도 보관)
+android-keystore/
+
+# Unity Android gradle/cmake temp
+.utmp/

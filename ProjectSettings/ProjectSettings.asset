@@ -82,7 +82,7 @@ PlayerSettings:
   androidFullscreenMode: 1
   androidAutoRotationBehavior: 1
   androidPredictiveBackSupport: 1
-  androidApplicationEntry: 2
+  androidApplicationEntry: 1
   defaultIsNativeResolution: 1
   macRetinaSupport: 1
   runInBackground: 0
@@ -167,6 +167,7 @@ PlayerSettings:
   androidMaxAspectRatio: 2.4
   androidMinAspectRatio: 1
   applicationIdentifier:
+    Android: me.ongil.colormergeexit
     iPhone: me.ongil.colormergeexit
   buildNumber:
     Standalone: 0
@@ -823,10 +824,12 @@ PlayerSettings:
   webGLCloseOnQuit: 0
   webWasm2023: 0
   scriptingDefineSymbols:
+    Android: FIREBASE_ANALYTICS
     iPhone: FIREBASE_ANALYTICS
   additionalCompilerArguments: {}
   platformArchitecture: {}
   scriptingBackend:
+    Android: 1
     iPhone: 1
   il2cppCompilerConfiguration: {}
   il2cppCodeGeneration: {}

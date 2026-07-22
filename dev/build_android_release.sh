@@ -13,8 +13,10 @@ CREDS="$PROJ/android-keystore/credentials.txt"
 LOGDIR="${LOGDIR:-/tmp}"
 
 [ -f "$CREDS" ] || { echo "ERROR: $CREDS 없음 — 키스토어 크리덴셜 필요"; exit 64; }
+# 파일의 # 줄은 셸 주석으로 그대로 무시된다. (process substitution은 샌드박스 셸에서 실패하므로 직접 source)
 set -a; # shellcheck disable=SC1090
-source <(grep -v '^#' "$CREDS"); set +a
+source "$CREDS"; set +a
+: "${ANDROID_KEYSTORE_PATH:?credentials.txt did not define ANDROID_KEYSTORE_PATH}"
 
 echo "== Unity Android AAB build (PRODUCTION_ADS=1) =="
 PRODUCTION_ADS=1 "$UNITY" -batchmode -quit -buildTarget Android -projectPath "$PROJ" \

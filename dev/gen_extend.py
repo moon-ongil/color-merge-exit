@@ -9,7 +9,7 @@ import mergegen as m
 
 START = int(sys.argv[1]) if len(sys.argv) > 1 else 501
 END = int(sys.argv[2]) if len(sys.argv) > 2 else 1000
-outdir = "/Users/moon/Developer/work/ongil/color-merge-exit/Assets/StreamingAssets/Levels"
+outdir = "/Users/moon/Developer/work/ongil/color-merge-exit/Assets/Resources/Levels"
 faillog = os.path.join(os.path.dirname(__file__), "gen_extend_fail.log")
 
 made = 0

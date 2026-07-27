@@ -1,15 +1,15 @@
 using System.Collections.Generic;
-using System.IO;
 using ColorMergeExit.Core;
 using UnityEngine;
 
 namespace ColorMergeExit.Game
 {
     /// <summary>
-    /// Loads a <see cref="LevelData"/> by id from StreamingAssets/Levels/level_NNN.json
-    /// (editor/standalone). Falls back to an in-code tutorial level so the game is
-    /// always playable even before any JSON is authored / on platforms where the
-    /// StreamingAssets path is not a readable file (e.g. Android inside the apk).
+    /// Loads a <see cref="LevelData"/> by id from Resources/Levels/level_NNN.json.
+    /// Resources is used rather than StreamingAssets because on Android the latter
+    /// lives inside the apk (a `jar:file://` url), where plain file IO always fails —
+    /// which silently served the fallback level for every stage. Falls back to an
+    /// in-code tutorial level if the asset is missing or malformed.
     /// </summary>
     public static class LevelRepository
     {
@@ -22,9 +22,12 @@ namespace ColorMergeExit.Game
         {
             try
             {
-                string path = Path.Combine(Application.streamingAssetsPath, "Levels", $"level_{id:000}.json");
-                if (File.Exists(path))
-                    return JsonUtility.FromJson<LevelData>(File.ReadAllText(path));
+                // Resources paths are extension-less and always use forward slashes.
+                var asset = Resources.Load<TextAsset>($"Levels/level_{id:000}");
+                if (asset == null) return null;
+                var data = JsonUtility.FromJson<LevelData>(asset.text);
+                Resources.UnloadAsset(asset);
+                return data;
             }
             catch
             {

@@ -209,7 +209,7 @@ namespace ColorMergeExit.Tests
         // Full re-verification that the byte-key solver still judges every shipped level solvable.
         // [Explicit] so the normal suite stays fast + path-independent; run on demand:
         //   dotnet test --filter Solver_AllShippedLevels_RemainSolvable
-        // Locates StreamingAssets via the LEVELS_DIR env var, else a repo-relative fallback.
+        // Locates the shipped levels via the LEVELS_DIR env var, else a repo-relative fallback.
         // dotnet-only: System.Text.Json isn't in Unity, so this compiles only in the CoreTests project.
 #if !UNITY_5_3_OR_NEWER
         [Test, Explicit]
@@ -218,7 +218,7 @@ namespace ColorMergeExit.Tests
             string dir = System.Environment.GetEnvironmentVariable("LEVELS_DIR");
             if (string.IsNullOrEmpty(dir))
                 dir = System.IO.Path.GetFullPath(System.IO.Path.Combine(
-                    TestContext.CurrentContext.TestDirectory, "../../../../Assets/StreamingAssets/Levels"));
+                    TestContext.CurrentContext.TestDirectory, "../../../../../Assets/Resources/Levels"));
             if (!System.IO.Directory.Exists(dir))
                 Assert.Ignore($"levels dir not found: {dir}");
 

@@ -666,7 +666,7 @@ def gen(i, seed, spec, cap):
 
 
 if __name__ == "__main__":
-    outdir = "/Users/moon/Developer/work/ongil/color-merge-exit/Assets/StreamingAssets/Levels"
+    outdir = "/Users/moon/Developer/work/ongil/color-merge-exit/Assets/Resources/Levels"
     # 8x8 merge boards (i>=160) use a LOWER solve cap: the DFS explodes on big boards, so a tight
     # cap abandons a pathological candidate fast and retries an easier seed (we only need SOME
     # solvable level per slot). 7x7 and specials keep the generous cap.

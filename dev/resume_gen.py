@@ -3,7 +3,7 @@ import mergegen as m
 
 START = int(sys.argv[1]) if len(sys.argv) > 1 else 462
 END = int(sys.argv[2]) if len(sys.argv) > 2 else 500
-outdir = "/Users/moon/Developer/work/ongil/color-merge-exit/Assets/StreamingAssets/Levels"
+outdir = "/Users/moon/Developer/work/ongil/color-merge-exit/Assets/Resources/Levels"
 
 for i in range(START, END + 1):
     seed = 90000 + i * 59

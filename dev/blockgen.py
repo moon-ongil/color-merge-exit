@@ -228,7 +228,7 @@ def gen(i, rng):
 
 
 if __name__ == "__main__":
-    outdir = "/Users/moon/Developer/work/ongil/color-merge-exit/Assets/StreamingAssets/Levels"
+    outdir = "/Users/moon/Developer/work/ongil/color-merge-exit/Assets/Resources/Levels"
     os.makedirs(outdir, exist_ok=True)
     made = 0
     for i in range(1, 31):

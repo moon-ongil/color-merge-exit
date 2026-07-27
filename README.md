@@ -35,7 +35,7 @@ Assets/
     AssetSetup.cs            # 단일 스프라이트 시트 6×6 격자 슬라이스 + GameSprites 배선
     FontSetup.cs / Screenshot.cs / BuildScript.cs / SceneBuilder.cs
   Art/Textures/blocks_sheet.png   # GPT 생성 단일 시트 (블록/출구/장애/타일/UI)
-  StreamingAssets/Levels/level_001..030.json
+  Resources/Levels/level_001..1000.json   # Android apk 안에서도 동기 로드되도록 Resources 사용
   Tests/EditMode/BoardTests.cs    # NUnit (Unity Test Runner + dotnet 공용)
 
 dev/
@@ -76,7 +76,7 @@ dev/
 BFS 솔버가 C# `Board`와 동일 규칙으로 **풀림 여부 + 최소 이동수**를 계산. 난이도는 **밀도(빈칸 2~4)** + **색 티어** + **레일 잠금**에서 나오며, 시간은 이동수에 비례해 자동 배정(별 기준은 시간의 30%/50%).
 
 ```bash
-python3 dev/blockgen.py    # Assets/StreamingAssets/Levels/level_001..030.json 재생성
+python3 dev/blockgen.py    # Assets/Resources/Levels/level_001..030.json 재생성
 ```
 
 난이도 곡선(30레벨): 1~6 순수 클로츠키(1~2단), 7~12 4색 2단, 13~18 레일 도입(2~3단), 19~24 3단, 25~30 6색 3~4단. 이동수 대략 2 → 30+.
@@ -121,7 +121,7 @@ bash dev/build_ios_sim.sh
 ```
 Unity가 Xcode 프로젝트 생성(`BuildScript.BuildIOSSimulator`, IL2CPP, SimulatorSDK) → **시뮬레이터 런타임 라이브러리를 universal로 교체**(Unity가 x86_64 전용을 복사하는 quirk 우회: `libiPhone-lib.dylib`/`baselib.a` → `*-sim-x64arm64`) → `xcodebuild`(iphonesimulator, arm64, 서명 불필요) → `simctl install/launch`.
 
-> 실기(device) 빌드는 Player Settings에서 SDK를 Device로 바꾸고 서명 설정 필요. StreamingAssets를 Android에서 읽으려면 `UnityWebRequest` 경로 추가(현재 인코드 폴백으로 항상 플레이 가능).
+> 실기(device) 빌드는 Player Settings에서 SDK를 Device로 바꾸고 서명 설정 필요.
 
 ## 다음 단계
 

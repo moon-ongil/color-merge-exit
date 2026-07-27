@@ -254,7 +254,7 @@ def to_level(i, cand):
 
 
 if __name__ == "__main__":
-    outdir = "/Users/moon/Developer/work/ongil/color-merge-exit/Assets/StreamingAssets/Levels"
+    outdir = "/Users/moon/Developer/work/ongil/color-merge-exit/Assets/Resources/Levels"
     for i in range(16, 31):
         rng = random.Random(70000 + i * 37)
         target = 6 + (i - 16) // 2

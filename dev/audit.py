@@ -1,7 +1,7 @@
 import json, os, glob
 from collections import Counter, defaultdict
 
-D = "/Users/moon/Developer/work/ongil/color-merge-exit/Assets/StreamingAssets/Levels"
+D = "/Users/moon/Developer/work/ongil/color-merge-exit/Assets/Resources/Levels"
 rows = []
 for i in range(1, 501):
     d = json.load(open(os.path.join(D, f"level_{i:03d}.json")))

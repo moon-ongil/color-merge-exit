@@ -1,7 +1,7 @@
 """Authors levels for Color Merge Exit and validates solvability with BFS.
 Mirrors the C# Board semantics: exact-step moves, exit requires color+lane+orientation
 match, each exit advances its own sequence, win = all target vehicles exited.
-Emits JSON matching LevelData (enums as ints) to Assets/StreamingAssets/Levels/.
+Emits JSON matching LevelData (enums as ints) to Assets/Resources/Levels/.
 """
 import json, os
 from collections import deque
@@ -158,7 +158,7 @@ LEVELS.append(dict(id=7,name="Way Up",width=6,height=6,
     exits=[ext(TOP,2,[P])], obstacles=[]))
 
 if __name__=="__main__":
-    outdir="/Users/moon/Developer/work/ongil/color-merge-exit/Assets/StreamingAssets/Levels"
+    outdir="/Users/moon/Developer/work/ongil/color-merge-exit/Assets/Resources/Levels"
     os.makedirs(outdir,exist_ok=True)
     allok=True
     for lv in LEVELS:

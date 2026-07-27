@@ -14,7 +14,7 @@ import json, os, random, sys
 
 R, B, Y, G, P, O = 0, 1, 2, 3, 4, 5
 RIGHT = 3
-OUTDIR = "/Users/moon/Developer/work/ongil/color-merge-exit/Assets/StreamingAssets/Levels"
+OUTDIR = "/Users/moon/Developer/work/ongil/color-merge-exit/Assets/Resources/Levels"
 
 # (a,b) -> secondary door colour
 MIX = {frozenset((R, B)): P, frozenset((B, Y)): G, frozenset((R, Y)): O}

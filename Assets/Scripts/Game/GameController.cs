@@ -42,7 +42,7 @@ namespace ColorMergeExit.Game
         private Coroutine _snapTween;
         // TEMP: input diagnostics for the "merged block sometimes won't move" bug. Logs are tagged
         // [MERGEDBG] so they can be grepped from the device console; set false to silence.
-        private const bool DebugInput = true;
+        private const bool DebugInput = false;
         private TutorialOverlay _tutorial;
         private bool TutorialBlocking => _tutorial != null && _tutorial.Blocking;
 
@@ -755,6 +755,13 @@ namespace ColorMergeExit.Game
         private const float DeadEndGraceSeconds = 10f;
         private float _deadEndFailAt = -1f;   // unscaled-time deadline; < 0 = no dead-end pending
 
+        // Dead-end search budget, per move. Measured on the shipped levels: above ~10k states the
+        // search almost never concludes on a big board — it just burns CPU and allocates (which the
+        // stop-the-world GC then charges to the main thread as a stutter) before reporting "solvable"
+        // because it gave up. The cheap ProvablyStranded pre-check still catches the common dead ends
+        // instantly; this cap only bounds the exhaustive fallback.
+        private const int DeadEndSearchCap = 10000;
+
         private void CheckDeadEnd()
         {
             if (_ended) return;
@@ -775,7 +782,7 @@ namespace ColorMergeExit.Game
                     // ProvablyStranded (inside IsSolvable) catches the common dead ends instantly; the
                     // full DFS is only a fallback, so cap it low enough that it can never stall for many
                     // seconds (its verdict would arrive stale anyway on a big merge/multi-door board).
-                    stuck = !Solver.IsSolvable(snap, 60000, out bool capHit, out int nodes,
+                    stuck = !Solver.IsSolvable(snap, DeadEndSearchCap, out bool capHit, out int nodes,
                                                out cause, out strandedColor);
                     if (DebugInput) Debug.Log($"[DEADEND] stuck={stuck} cause={cause} capHit={capHit} nodes={nodes} ms={sw.ElapsedMilliseconds}");
                 }

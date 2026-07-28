@@ -561,6 +561,16 @@ namespace ColorMergeExit.Game
         {
             AnimateBackdrop();   // gentle bokeh drift
 
+            // Android BACK on the root screen. Quitting on the first press loses progress-in-progress
+            // by accident, so require a confirming second press inside the window (the standard
+            // Android "press back again to exit" pattern) and say so on screen.
+            if (Input.GetKeyDown(KeyCode.Escape)) HandleBackButton();
+            if (_backHintUntil > 0f && Time.unscaledTime > _backHintUntil)
+            {
+                _backHintUntil = 0f;
+                if (_backHint != null) _backHint.gameObject.SetActive(false);
+            }
+
             // tick the hearts refill countdown (and rebuild the row when a heart refills)
             _heartTick += Time.deltaTime;
             if (_heartTick >= 1f)
@@ -712,6 +722,31 @@ namespace ColorMergeExit.Game
         }
 
         // Thin forwarders to the shared toolkit so sprite/text construction lives in exactly one place.
+        // ---- Android BACK (Unity maps it to Escape) ----
+        private const float BackAgainWindow = 2f;
+        private float _backHintUntil;
+        private TMP_Text _backHint;
+
+        private void HandleBackButton()
+        {
+            if (_backHintUntil > 0f) { Application.Quit(); return; }   // second press inside the window
+            _backHintUntil = Time.unscaledTime + BackAgainWindow;
+            if (_backHint == null)
+            {
+                _backHint = MakeText(transform, "BackHint",
+                    new Vector3(0f, -_halfH + 1.2f, -5f), Typography.Label, Sorting.DialogText);
+                _backHint.color = new Color(0.18f, 0.18f, 0.28f, 0.95f);
+                // Keep it inside the trail's width: the default text box is wider than the screen, so
+                // an unconstrained line runs off both edges on a phone.
+                _backHint.rectTransform.sizeDelta = new Vector2(_halfW * 1.8f, 1.6f);
+                _backHint.enableAutoSizing = true;
+                _backHint.fontSizeMin = Typography.Caption;
+                _backHint.fontSizeMax = Typography.Label;
+            }
+            _backHint.text = Localization.Get(LocKeys.BackAgainToExit);
+            _backHint.gameObject.SetActive(true);
+        }
+
         private SpriteRenderer MakeSprite(Transform parent, string name, Vector3 pos, Color color, int order)
             => Ui.Sprite(parent, name, pos, color, order);
 

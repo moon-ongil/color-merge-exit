@@ -279,10 +279,28 @@ namespace ColorMergeExit.Game
             }
         }
 
+
+        // ---- Android BACK (Unity maps it to Escape) ----
+        // It did nothing at all before, so the system button felt broken. Games are expected to make
+        // Back "go up one level" and never to kill a run outright: close whatever is on top, and only
+        // when nothing is open ask before leaving the level.
+        private bool HandleBackButton()
+        {
+            if (TutorialBlocking) return true;                      // coach-mark owns the screen; swallow
+            if (_hud.ResultOpen) { _onHome?.Invoke(); return true; } // win/lose dialog -> back to the map
+            if (_hud.ConfirmOpen) { _hud.HideConfirm(); return true; }
+            if (_hud.SettingsOpen) { _hud.CloseSettings(); return true; }
+            if (_hud.InfoOpen) { _hud.CloseInfo(); return true; }
+            if (_ended) { _onHome?.Invoke(); return true; }
+            _hud.ShowConfirm("exit", "EXIT?");
+            return true;
+        }
+
         private void Update()
         {
             if (_bannerLayoutDirty) { _bannerLayoutDirty = false; RelayoutForBanner(); }
             if (_session == null) return;
+            if (Input.GetKeyDown(KeyCode.Escape) && HandleBackButton()) return;
             // popups, the tutorial coach-mark, AND a full-screen ad all pause the clock (watching a
             // rewarded ad must never burn the level timer)
             if (_session.State == SessionState.Playing && !_hud.SettingsOpen && !_hud.InfoOpen

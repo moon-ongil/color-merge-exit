@@ -106,6 +106,7 @@ namespace ColorMergeExit.Game
                     [LocKeys.DeadEndStranded] = "No door can ever take the {0} block",
                     [LocKeys.DeadEndNoSolution] = "This arrangement can no longer be cleared",
                     [LocKeys.LockedHint] = "A locked block frees up when blocks merge right next to it",
+                    [LocKeys.BackAgainToExit] = "Press back again to exit",
                     ["color.red"] = "red",
                     ["color.blue"] = "blue",
                     ["color.yellow"] = "yellow",
@@ -158,6 +159,7 @@ namespace ColorMergeExit.Game
                     [LocKeys.DeadEndStranded] = "{0} 블록이 나갈 수 있는 문이 없어요",
                     [LocKeys.DeadEndNoSolution] = "이 배치로는 더 이상 클리어할 수 없어요",
                     [LocKeys.LockedHint] = "자물쇠 블록은 바로 옆에서 머지가 일어나면 풀려요",
+                    [LocKeys.BackAgainToExit] = "한 번 더 누르면 종료돼요",
                     ["color.red"] = "빨강",
                     ["color.blue"] = "파랑",
                     ["color.yellow"] = "노랑",
@@ -298,6 +300,7 @@ namespace ColorMergeExit.Game
         public const string DeadEndStranded = "game.deadend.stranded";
         public const string DeadEndNoSolution = "game.deadend.nosolution";
         public const string LockedHint = "tutorial.locked";
+        public const string BackAgainToExit = "system.backagain";
         public const string SplitPick = "game.splitpick";
         /// <summary>Colour display names, indexed by <see cref="ColorMergeExit.Core.CarColor"/>.</summary>
         public static string Color(ColorMergeExit.Core.CarColor c) => "color." + c.ToString().ToLowerInvariant();

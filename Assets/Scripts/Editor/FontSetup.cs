@@ -112,10 +112,29 @@ namespace ColorMergeExit.Editor
             string chars = new string(arr);
             Debug.Log($"[Color Merge Exit] subsetting to {chars.Length} unique glyphs.");
 
+            // asset name -> the TTF it is baked from. A previous OptimizeFonts run CLEARS the source
+            // reference, and CreateFonts won't put it back (it returns an existing asset untouched), so
+            // re-link here. Without this the second run clears the atlas and bakes 0 glyphs — the fonts
+            // silently lose every non-ASCII character.
+            var sources = new System.Collections.Generic.Dictionary<string, string>
+            {
+                ["Pretendard SDF"] = "Pretendard-Regular.ttf",
+                ["Game SDF"] = "TitanOne-Regular.ttf",
+                ["NotoSansSC SDF"] = "NotoSansSC.ttf",
+                ["NotoSansJP SDF"] = "NotoSansJP.ttf",
+                ["NotoSansArabic SDF"] = "NotoSansArabic.ttf",
+            };
+
             foreach (var name in new[] { "Pretendard SDF", "Game SDF", "NotoSansSC SDF", "NotoSansJP SDF", "NotoSansArabic SDF" })
             {
                 var fa = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(OutDir + name + ".asset");
                 if (fa == null) { Debug.LogWarning("[Color Merge Exit] missing font asset: " + name); continue; }
+
+                if (!RelinkSource(fa, sources[name]))
+                {
+                    Debug.LogError($"[Color Merge Exit] {name}: source TTF missing — REFUSING to clear its atlas.");
+                    continue;   // never strip a font we cannot rebuild
+                }
 
                 fa.atlasPopulationMode = AtlasPopulationMode.Dynamic; // need source to rasterize
                 fa.ClearFontAssetData(true);
@@ -133,12 +152,30 @@ namespace ColorMergeExit.Editor
 
                 int baked = fa.characterTable != null ? fa.characterTable.Count : 0;
                 int atlases = fa.atlasTextures != null ? fa.atlasTextures.Length : 0;
+                if (baked == 0)
+                    Debug.LogError($"[Color Merge Exit] {name}: baked 0 glyphs — atlas is now EMPTY, restore it from git.");
                 Debug.Log($"[Color Merge Exit] optimized {name}: baked {baked} glyphs across {atlases} atlas(es).");
             }
 
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
             Debug.Log("[Color Merge Exit] Font subsetting done — TTF source refs cleared (excluded from build).");
+        }
+
+        /// <summary>Point a font asset back at its source TTF so it can rasterize again. Returns false
+        /// when the TTF is missing, in which case the caller must NOT clear the existing atlas.</summary>
+        private static bool RelinkSource(TMP_FontAsset fa, string ttf)
+        {
+            string src = FontDir + ttf;
+            var font = AssetDatabase.LoadAssetAtPath<Font>(src);
+            if (font == null) { Debug.LogWarning("[Color Merge Exit] Missing font: " + src); return false; }
+            var so = new SerializedObject(fa);
+            var p = so.FindProperty("m_SourceFontFile");
+            if (p != null) p.objectReferenceValue = font;
+            var g = so.FindProperty("m_SourceFontFileGUID");
+            if (g != null) g.stringValue = AssetDatabase.AssetPathToGUID(src);
+            so.ApplyModifiedProperties();
+            return true;
         }
 
         private static TMP_FontAsset CreateFontAsset(string ttf, string assetName)

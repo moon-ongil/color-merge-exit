@@ -52,8 +52,11 @@ if [ -f Podfile ] && [ ! -d Pods ]; then
   pod install >> "$LOGDIR/podinstall_release.log" 2>&1 || true
 fi
 
-# Unique, monotonic build number on the generated project.
-BN="${BUILD_NUMBER:-$(date +%Y%m%d%H%M)}"
+# Build number: single source of truth is ProjectSettings (buildNumber.iPhone), so iOS and
+# Android ship the SAME number for a given release. BUILD_NUMBER env still overrides.
+BN="${BUILD_NUMBER:-$(sed -n '/^  buildNumber:/,/^  [^ ]/p' "$PROJ/ProjectSettings/ProjectSettings.asset" \
+        | sed -n 's/^    iPhone: //p' | head -1)}"
+[ -n "$BN" ] || { echo "ERROR: could not read buildNumber.iPhone from ProjectSettings"; exit 66; }
 INFO="$OUT/Info.plist"; [ -f "$INFO" ] || INFO="$OUT/Unity-iPhone/Info.plist"
 if [ -f "$INFO" ]; then
   /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $BN" "$INFO" 2>/dev/null \

@@ -173,6 +173,21 @@ namespace ColorMergeExit.Game
                 grants.Add(() => { TutorialStore.MarkSeen("split"); ItemStore.Unlock(ItemType.ForceSplit); _hud.RefreshItems(); });
             }
 
+            // Locked blocks: a padlock appears with no explanation of what frees it, and playtesters
+            // reported not knowing what the block was for. Point at the first one and say the rule
+            // once — there is no gesture that can show "merge NEXT TO it", so this step is caption-led.
+            if (!TutorialStore.Seen("locked"))
+            {
+                Block lockedBlock = null;
+                foreach (var b in _session.Board.Blocks) if (b.Locked) { lockedBlock = b; break; }
+                if (lockedBlock != null)
+                {
+                    steps.Add(TutorialStep.Tap(_board.BlockCenter(lockedBlock),
+                                               Localization.Get(LocKeys.LockedHint)));
+                    grants.Add(() => TutorialStore.MarkSeen("locked"));
+                }
+            }
+
             if (steps.Count == 0) return;
 
             if (_tutorial == null)
@@ -711,7 +726,12 @@ namespace ColorMergeExit.Game
         // task finishing late overwrote a newer "stuck" verdict, dropping a real dead end.)
         private int _checkGen;
         private int _lastAppliedGen = -1;
-        private volatile int _deadEndResult = -1; // -1 = none; else (gen<<1) | (stuck ? 1 : 0)
+        // -1 = none; else (gen<<7) | (colour<<3) | (cause<<1) | (stuck ? 1 : 0). The reason rides in the
+        // SAME word as the verdict so a slower check can never pair its reason with a newer verdict.
+        private volatile int _deadEndResult = -1;
+        private const int GenShift = 7;
+        private DeadEndCause _deadEndCause;
+        private CarColor _deadEndColor;
         // A proven dead end no longer fails instantly — the player gets a GRACE window (a warning +
         // countdown) to undo or use an item to escape. If still stuck when it elapses, the run fails.
         private const float DeadEndGraceSeconds = 10f;
@@ -729,22 +749,25 @@ namespace ColorMergeExit.Game
             System.Threading.Tasks.Task.Run(() =>
             {
                 bool stuck;
+                DeadEndCause cause;
+                CarColor strandedColor;
                 try
                 {
                     var sw = System.Diagnostics.Stopwatch.StartNew();
                     // ProvablyStranded (inside IsSolvable) catches the common dead ends instantly; the
                     // full DFS is only a fallback, so cap it low enough that it can never stall for many
                     // seconds (its verdict would arrive stale anyway on a big merge/multi-door board).
-                    stuck = !Solver.IsSolvable(snap, 60000, out bool capHit, out int nodes);
-                    if (DebugInput) Debug.Log($"[DEADEND] stuck={stuck} capHit={capHit} nodes={nodes} ms={sw.ElapsedMilliseconds}");
+                    stuck = !Solver.IsSolvable(snap, 60000, out bool capHit, out int nodes,
+                                               out cause, out strandedColor);
+                    if (DebugInput) Debug.Log($"[DEADEND] stuck={stuck} cause={cause} capHit={capHit} nodes={nodes} ms={sw.ElapsedMilliseconds}");
                 }
                 catch { return; } // never let a solver error silently kill detection
-                int packed = (gen << 1) | (stuck ? 1 : 0);
+                int packed = (gen << GenShift) | ((int)strandedColor << 3) | ((int)cause << 1) | (stuck ? 1 : 0);
                 int cur;
                 do
                 {
                     cur = _deadEndResult;
-                    if (cur >= 0 && (cur >> 1) >= gen) return; // a newer verdict already published
+                    if (cur >= 0 && (cur >> GenShift) >= gen) return; // a newer verdict already published
                 }
                 while (System.Threading.Interlocked.CompareExchange(ref _deadEndResult, packed, cur) != cur);
             });
@@ -754,8 +777,10 @@ namespace ColorMergeExit.Game
         {
             int r = _deadEndResult;
             if (r < 0) return;
-            int gen = r >> 1;
+            int gen = r >> GenShift;
             bool stuck = (r & 1) != 0;
+            _deadEndCause = (DeadEndCause)((r >> 1) & 0x3);
+            _deadEndColor = (CarColor)((r >> 3) & 0xF);
             if (gen == _lastAppliedGen) return;                                          // already handled
             if (gen != _checkGen || _ended || _session.State != SessionState.Playing) return; // stale
             _lastAppliedGen = gen;
@@ -784,7 +809,10 @@ namespace ColorMergeExit.Game
             if (UiBlocking) { _deadEndFailAt += Time.deltaTime; return; } // pause the grace behind a dialog/ad
             float remain = _deadEndFailAt - Time.time;
             if (remain <= 0f) { OnDeadEnd(); return; }
-            _hud.ShowBanner($"{Localization.Get(LocKeys.DeadEnd)}\n{Mathf.CeilToInt(remain)}", new Color(0.98f, 0.55f, 0.42f));
+            // The reason rides as the banner's note line: players reported the bare "NO WAY OUT!" left
+            // them with no idea what went wrong or what to undo.
+            _hud.ShowBanner($"{Localization.Get(LocKeys.DeadEnd)} {Mathf.CeilToInt(remain)}",
+                new Color(0.98f, 0.55f, 0.42f), DeadEndReasonText());
         }
 
         // Called when the dead-end grace window elapses: stop the clock and show the fail dialog.
@@ -795,9 +823,19 @@ namespace ColorMergeExit.Game
             HeartStore.Spend();   // a failure costs a life
             Analytics.LevelFail(_levelId, "deadend", _level.timeLimitSeconds - _session.TimeRemaining, _session.Board.MoveCount);
             _session.Abort();
-            _hud.ShowResult(false, HeartStore.HasHeart, 0, Localization.Get(LocKeys.DeadEnd), new Color(0.98f, 0.5f, 0.5f));
+            _hud.ShowResult(false, HeartStore.HasHeart, 0,
+                Localization.Get(LocKeys.DeadEnd), new Color(0.98f, 0.5f, 0.5f), DeadEndReasonText());
             AudioManager.Instance?.Lose();
         }
+
+        /// <summary>One line telling the player WHY the board is dead, from the solver's own verdict.</summary>
+        private string DeadEndReasonText() => _deadEndCause switch
+        {
+            DeadEndCause.NoDoorsLeft => Localization.Get(LocKeys.DeadEndNoDoors),
+            DeadEndCause.StrandedBlock => string.Format(Localization.Get(LocKeys.DeadEndStranded),
+                                                        Localization.Get(LocKeys.Color(_deadEndColor))),
+            _ => Localization.Get(LocKeys.DeadEndNoSolution),
+        };
 
         private IEnumerator SnapEase(int id, Vector3 from, Vector3 to, float dur)
         {

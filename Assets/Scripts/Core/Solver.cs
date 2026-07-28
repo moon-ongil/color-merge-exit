@@ -67,13 +67,24 @@ namespace ColorMergeExit.Core
         /// proving anything (so it reports solvable to avoid false alarms); <paramref name="nodes"/> =
         /// states explored. Diagnostics for "dead end not detected" cases.</summary>
         public static bool IsSolvable(Snapshot snap, int cap, out bool capHit, out int nodes)
+            => IsSolvable(snap, cap, out capHit, out nodes, out _, out _);
+
+        /// <summary>As above, plus WHY the position is dead. Players told us the dead-end banner left
+        /// them guessing, and the stranded pre-check already knows the answer — it just used to throw it
+        /// away. <paramref name="cause"/> is only meaningful when this returns false; a search that ran
+        /// out of moves (rather than tripping the pre-check) reports <see cref="DeadEndCause.NoSolution"/>,
+        /// which has no single block to blame.</summary>
+        public static bool IsSolvable(Snapshot snap, int cap, out bool capHit, out int nodes,
+                                      out DeadEndCause cause, out CarColor strandedColor)
         {
             capHit = false;
+            cause = DeadEndCause.None;
+            strandedColor = default;
             // Cheap sound pre-check: if some block can NEVER reach any open door's colour (even granting
             // every possible merge/split/cycle), the position is a proven dead end — no need for the full,
             // potentially explosive DFS. Over-approximated so it can only ever be RIGHT about a dead end
             // (never flags a winnable board), and it catches the common "stranded block" case instantly.
-            if (ProvablyStranded(snap)) { nodes = 0; return false; }
+            if (ProvablyStranded(snap, out cause, out strandedColor)) { nodes = 0; return false; }
 
             var startDoor = new int[snap.Doors.Length];
             for (int i = 0; i < snap.Doors.Length; i++) startDoor[i] = snap.Doors[i].StartIndex;
@@ -99,6 +110,7 @@ namespace ColorMergeExit.Core
                     if (seen.Add(KeyBytes(ns.blocks, ns.didx))) stack.Push((ns.blocks, ns.didx));
             }
             nodes = seen.Count;
+            cause = DeadEndCause.NoSolution;
             return false; // search fully exhausted with no clear -> proven dead end
         }
 
@@ -107,15 +119,17 @@ namespace ColorMergeExit.Core
         /// splits/chameleon cycles always available), so a "true" is always a genuine dead end, while
         /// winnable boards are never flagged. Catches the frequent "wrong door spent → block stranded" case
         /// without the exponential full search.</summary>
-        private static bool ProvablyStranded(Snapshot snap)
+        private static bool ProvablyStranded(Snapshot snap, out DeadEndCause cause, out CarColor strandedColor)
         {
+            cause = DeadEndCause.None;
+            strandedColor = default;
             if (snap.Blocks.Count == 0) return false;
 
             // colours any still-open door can still accept (its current colour + every remaining one)
             var exitColors = new HashSet<CarColor>();
             foreach (var d in snap.Doors)
                 for (int k = d.StartIndex; k < d.Seq.Length; k++) exitColors.Add(d.Seq[k]);
-            if (exitColors.Count == 0) return true; // no open doors but blocks remain -> dead
+            if (exitColors.Count == 0) { cause = DeadEndCause.NoDoorsLeft; return true; } // no open doors but blocks remain -> dead
 
             bool hasSplit = snap.Splitters != null && snap.Splitters.Count > 0;
 
@@ -137,7 +151,15 @@ namespace ColorMergeExit.Core
                 ExpandColorClosure(reach, producible, hasSplit);
                 bool canExit = false;
                 foreach (var c in reach) if (exitColors.Contains(c)) { canExit = true; break; }
-                if (!canExit) return true; // this block can never match an open door -> proven dead
+                if (!canExit)
+                {
+                    // Name the block the player has to account for. Its CURRENT colour is what they see
+                    // on the board, so report that even for a cycling block (whose colour is a wildcard
+                    // to the search).
+                    cause = DeadEndCause.StrandedBlock;
+                    strandedColor = b.C;
+                    return true; // this block can never match an open door -> proven dead
+                }
             }
             return false;
         }

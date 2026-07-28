@@ -20,6 +20,19 @@ namespace ColorMergeExit.Core
         Amber    // Yellow + Orange
     }
 
+    /// <summary>Why a position can no longer be cleared — surfaced to the player so the dead-end
+    /// warning explains itself instead of just announcing failure.</summary>
+    public enum DeadEndCause
+    {
+        None = 0,
+        /// <summary>Blocks remain but every door has been used up.</summary>
+        NoDoorsLeft = 1,
+        /// <summary>One block's colour can never match any door still open (even after every merge).</summary>
+        StrandedBlock = 2,
+        /// <summary>The search exhausted every move without clearing — no single block to blame.</summary>
+        NoSolution = 3,
+    }
+
     /// <summary>Board edge a door sits on.</summary>
     public enum Edge
     {

@@ -26,6 +26,8 @@ namespace ColorMergeExit.Game
         private TMP_Text _timer;
         private TMP_Text _banner;
         private SpriteRenderer _bannerBg;   // dark toast behind the banner so text reads over any block
+        private TMP_Text _bannerNote;       // optional "why" line under the headline
+        private const float BannerBgH = 2.8f, BannerBgHWithNote = 4.6f;
         private Transform _restartBtn, _undoBtn, _homeBtn, _settingsBtn;
         private Transform _hintBtn, _addTimeBtn, _forceSplitBtn;
         private SpriteRenderer _hintSr, _addTimeSr, _forceSplitSr;        // button body (tint)
@@ -125,9 +127,23 @@ namespace ColorMergeExit.Game
             // Dark translucent toast BEHIND the banner (just below its text order) so the message +
             // countdown read clearly even when blocks sit behind them.
             _bannerBg = Sprite("BannerBg", new Vector3(0f, 0.2f, 0.05f), new Color(0.12f, 0.10f, 0.20f, 0.60f), Sorting.Text - 1, VisualAssets.RoundedSquare());
-            Ui.Sliced(_bannerBg, _barW + 0.8f, 2.8f);
+            Ui.Sliced(_bannerBg, _barW + 0.8f, BannerBgH);
             _bannerBg.gameObject.SetActive(false);
             _banner.gameObject.SetActive(false);
+
+            // Second line under the headline, for the "why" behind a state message (which block is
+            // stranded, which doors ran out). Kept small and wrapping so a full sentence fits without
+            // shrinking the headline — the banner's autosize is uniform, so sharing one text object
+            // would drag "NO WAY OUT!" down to the sentence's size.
+            _bannerNote = Text("BannerNote", new Vector3(0f, -1.05f, 0f), Typography.Body);
+            _bannerNote.enableWordWrapping = true;
+            _bannerNote.rectTransform.sizeDelta = new Vector2(Mathf.Max(6f, _barW - 0.4f), 2.4f);
+            _bannerNote.enableAutoSizing = true;
+            _bannerNote.fontSizeMin = Typography.Caption;
+            _bannerNote.fontSizeMax = Typography.Body;
+            _bannerNote.fontMaterial.SetFloat(ShaderUtilities.ID_OutlineWidth, 0.22f);
+            _bannerNote.fontMaterial.SetColor(ShaderUtilities.ID_OutlineColor, new Color(0.12f, 0.10f, 0.20f, 1f));
+            _bannerNote.gameObject.SetActive(false);
 
             // ---- Top corners: game-independent nav. Left column = Info (top) then Home (below);
             // right column = Settings (top). Restart lives INSIDE the settings popup now, so the
@@ -272,17 +288,37 @@ namespace ColorMergeExit.Game
             }
         }
 
-        public void ShowBanner(string text, Color color)
+        public void ShowBanner(string text, Color color) => ShowBanner(text, color, null);
+
+        /// <summary><paramref name="note"/> adds a smaller explanation line under the headline and
+        /// grows the toast to cover it.</summary>
+        public void ShowBanner(string text, Color color, string note)
         {
             _banner.text = text;
             _banner.color = color;
             _banner.gameObject.SetActive(true);
-            if (_bannerBg != null) _bannerBg.gameObject.SetActive(true);
+            bool hasNote = !string.IsNullOrEmpty(note);
+            if (_bannerNote != null)
+            {
+                _bannerNote.text = note ?? "";
+                _bannerNote.color = new Color(1f, 0.95f, 0.9f, 0.95f);
+                _bannerNote.gameObject.SetActive(hasNote);
+            }
+            if (_bannerBg != null)
+            {
+                // Grow DOWNWARD only: the headline must stay put whether or not a note is present.
+                float h = hasNote ? BannerBgHWithNote : BannerBgH;
+                Ui.Sliced(_bannerBg, _barW + 0.8f, h);
+                var p = _bannerBg.transform.localPosition;
+                _bannerBg.transform.localPosition = new Vector3(p.x, 0.2f - (h - BannerBgH) * 0.5f, p.z);
+                _bannerBg.gameObject.SetActive(true);
+            }
         }
 
         public void HideBanner()
         {
             _banner.gameObject.SetActive(false);
+            if (_bannerNote != null) _bannerNote.gameObject.SetActive(false);
             if (_bannerBg != null) _bannerBg.gameObject.SetActive(false);
         }
 
@@ -311,6 +347,12 @@ namespace ColorMergeExit.Game
         /// <summary>Show the end-of-level overlay: a dim scrim, a big title, and two buttons.
         /// Win → NEXT / EXIT. Lose with hearts → RETRY / EXIT. Lose with no hearts → REFILL / EXIT.</summary>
         public void ShowResult(bool won, bool hasHearts, int stars, string title, Color titleColor)
+            => ShowResult(won, hasHearts, stars, title, titleColor, null);
+
+        /// <summary><paramref name="note"/> is a wrapped, small explanation under the headline. It has
+        /// to be its own text object: the title is a single no-wrap line whose autosize is uniform, so
+        /// a sentence appended to it runs off both edges of the screen.</summary>
+        public void ShowResult(bool won, bool hasHearts, int stars, string title, Color titleColor, string note)
         {
             HideBanner();   // clear any centre banner (e.g. the dead-end countdown) so it can't show through
             HideConfirm();  // never stack the result on top of an open RESTART?/EXIT? dialog
@@ -328,6 +370,17 @@ namespace ColorMergeExit.Game
             t.enableAutoSizing = true; t.fontSizeMax = Typography.Display; t.fontSizeMin = 5f;
             t.rectTransform.sizeDelta = new Vector2(8.4f, 2.4f);
             Ui.Lighten(t, -0.12f);
+
+            if (!string.IsNullOrEmpty(note))
+            {
+                var n = Ui.Text(root, "R_Note", new Vector3(0f, titleY - 1.15f, -2f), Typography.Label, Sorting.DialogText);
+                n.text = note;
+                n.color = new Color(1f, 0.95f, 0.92f, 0.92f);
+                n.enableWordWrapping = true;
+                // Two short lines at most: the RETRY/EXIT row sits just below.
+                n.enableAutoSizing = true; n.fontSizeMax = Typography.Label; n.fontSizeMin = Typography.Caption;
+                n.rectTransform.sizeDelta = new Vector2(8.4f, 1.6f);
+            }
 
             // On a win, show the earned star rating (same gold/grey coin-star as the level-select).
             if (won)

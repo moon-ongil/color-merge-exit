@@ -206,6 +206,27 @@ namespace ColorMergeExit.Tests
             Assert.IsTrue(Solver.IsSolvable(shaped), "red bar slides into blue bar -> purple bar exits");
         }
 
+        // The dead-end banner tells the player WHY, so the solver's reason has to name the right block.
+        [Test]
+        public void Solver_ReportsWhyTheBoardIsDead()
+        {
+            // lone Red, only a Green door -> Red is the block that can never leave
+            var stranded = Solver.Capture(new Board(6, 6,
+                new[] { Block.Rect(1, R, 2, 2) },
+                new[] { Door(Edge.Right, 2, 1, G) }));
+            Assert.IsFalse(Solver.IsSolvable(stranded, 60000, out _, out _,
+                out var cause, out var color));
+            Assert.AreEqual(DeadEndCause.StrandedBlock, cause);
+            Assert.AreEqual(R, color, "the red block is the one with no door");
+
+            // a solvable board must not claim a reason
+            var ok = Solver.Capture(new Board(6, 6,
+                new[] { Block.Rect(1, R, 2, 2), Block.Rect(2, B, 4, 2) },
+                new[] { Door(Edge.Right, 2, 1, P) }));
+            Assert.IsTrue(Solver.IsSolvable(ok, 60000, out _, out _, out var okCause, out _));
+            Assert.AreEqual(DeadEndCause.None, okCause);
+        }
+
         // Full re-verification that the byte-key solver still judges every shipped level solvable.
         // [Explicit] so the normal suite stays fast + path-independent; run on demand:
         //   dotnet test --filter Solver_AllShippedLevels_RemainSolvable

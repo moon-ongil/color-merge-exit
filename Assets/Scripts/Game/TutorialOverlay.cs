@@ -15,11 +15,14 @@ namespace ColorMergeExit.Game
         public Vector3 From;
         public Vector3 To;
         public Color GhostColor;
+        /// <summary>Optional one-line explanation. Gestures teach themselves, but a rule the player
+        /// can't infer from the motion (e.g. what unlocks a locked block) needs words.</summary>
+        public string Caption;
 
-        public static TutorialStep Drag(Vector3 from, Vector3 to, Color ghost) =>
-            new TutorialStep { Kind = TutorialKind.Drag, From = from, To = to, GhostColor = ghost };
-        public static TutorialStep Tap(Vector3 at) =>
-            new TutorialStep { Kind = TutorialKind.Tap, From = at, To = at };
+        public static TutorialStep Drag(Vector3 from, Vector3 to, Color ghost, string caption = null) =>
+            new TutorialStep { Kind = TutorialKind.Drag, From = from, To = to, GhostColor = ghost, Caption = caption };
+        public static TutorialStep Tap(Vector3 at, string caption = null) =>
+            new TutorialStep { Kind = TutorialKind.Tap, From = at, To = at, Caption = caption };
     }
 
     /// <summary>
@@ -38,7 +41,8 @@ namespace ColorMergeExit.Game
         private Action _onDone;
 
         private GameObject _root;
-        private SpriteRenderer _ghost, _hand, _chevron;
+        private SpriteRenderer _ghost, _hand, _chevron, _captionBg;
+        private TMPro.TMP_Text _caption;
         private float _cooldownUntil, _stepStart;
 
         public bool Active { get; private set; }
@@ -83,6 +87,27 @@ namespace ColorMergeExit.Game
             _ghost = MakeSprite("Ghost", Vector3.zero, VisualAssets.GlossyBlock(), Color.white, OrderGhost);
             _hand = MakeSprite("Hand", Vector3.zero, VisualAssets.ArrowCursor(), Color.white, OrderHand);
 
+            // Caption sits just above the chevron, over the scrim. Most steps leave it empty — the
+            // overlay stays gesture-first — but a rule that a gesture can't show gets one line.
+            // It lands over the ITEMS row, so it carries its own dark plate (same trick as the HUD
+            // banner) rather than reading as text scribbled across the item buttons.
+            // Sized to stop short of the chevron below it, so "tap to continue" stays outside the plate.
+            _captionBg = MakeSprite("CaptionBg", new Vector3(c.x, c.y - half * 0.62f, -0.15f),
+                VisualAssets.RoundedSquare(), new Color(0.10f, 0.09f, 0.18f, 0.82f), OrderChevron - 1);
+            Ui.Sliced(_captionBg, halfW * 1.9f, 2.9f);
+            _captionBg.gameObject.SetActive(false);
+
+            _caption = Ui.Text(_root.transform, "Caption", new Vector3(c.x, c.y - half * 0.62f, -0.2f),
+                Typography.Body, OrderChevron);
+            _caption.enableWordWrapping = true;
+            _caption.rectTransform.sizeDelta = new Vector2(Mathf.Max(6f, halfW * 1.8f), 3.2f);
+            _caption.enableAutoSizing = true;
+            _caption.fontSizeMin = Typography.Label;
+            _caption.fontSizeMax = Typography.Body;
+            _caption.fontStyle = TMPro.FontStyles.Bold;
+            _caption.color = new Color(1f, 0.98f, 0.92f, 0.98f);
+            _caption.gameObject.SetActive(false);
+
             // pulsing "tap to continue" chevron at the very bottom (a downward triangle — no text)
             _chevron = MakeSprite("Chevron", new Vector3(c.x, c.y - half * 0.82f, -0.2f),
                 VisualAssets.Chevron(), new Color(1f, 1f, 1f, 0.9f), OrderChevron);
@@ -95,6 +120,13 @@ namespace ColorMergeExit.Game
         {
             _stepStart = Time.unscaledTime;
             var s = _steps[i];
+            bool hasCaption = !string.IsNullOrEmpty(s.Caption);
+            if (_caption != null)
+            {
+                _caption.text = s.Caption ?? "";
+                _caption.gameObject.SetActive(hasCaption);
+            }
+            if (_captionBg != null) _captionBg.gameObject.SetActive(hasCaption);
             bool drag = s.Kind == TutorialKind.Drag;
             _ghost.gameObject.SetActive(drag);
             if (drag)

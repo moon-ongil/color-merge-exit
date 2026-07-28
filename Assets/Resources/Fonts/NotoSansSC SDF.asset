@@ -1,6 +1,6 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
---- !u!28 &-4876097930451421733
+--- !u!28 &-5098920186339241970
 Texture2D:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -3301,7 +3301,7 @@ MonoBehaviour:
     m_Scale: 1
   m_AtlasTextures:
   - {fileID: -1285712657269884225}
-  - {fileID: -4876097930451421733}
+  - {fileID: -5098920186339241970}
   m_AtlasTextureIndex: 1
   m_IsMultiAtlasTexturesEnabled: 1
   m_GetFontFeatures: 1
